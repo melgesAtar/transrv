@@ -8,6 +8,7 @@ import br.com.modware.transrv.repository.WAMessageRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -38,7 +39,6 @@ public class WAMessageService {
     private static final String MODEL_TRANSCRIBE = "gpt-4o-transcribe";
     private static final long MAX_DOC_BYTES = 5L * 1024 * 1024; // 3 MiB
     private static final ZoneId TZ = ZoneId.of("America/Sao_Paulo");
-
     private final ObjectMapper mapper = new ObjectMapper();
     private final WAMessageRepository waMessageRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -49,13 +49,14 @@ public class WAMessageService {
         this.waMessageRepository = waMessageRepository;
     }
 
+
     public WAMessage processMessage(EventEvolution eventEvolution, WAConversation waConversation, WAContact waContact) {
         String convKey = eventEvolution.getData().getKey().getRemoteJid();
         Object lock = conversationLocks.computeIfAbsent(convKey, k -> new Object());
 
         synchronized (lock) {
-            waMessageRepository.findByEvolutionMessageId(eventEvolution.getData().getKey().getId())
-                    .ifPresentOrElse(existingMessage -> {}, () -> {
+            return waMessageRepository.findByEvolutionMessageId(eventEvolution.getData().getKey().getId())
+                    .orElseGet(() -> {
                         String type = eventEvolution.getData().getMessageType();
 
                         String contentMessage;
@@ -79,11 +80,11 @@ public class WAMessageService {
                         newMessage.setMessageContent(contentMessage);
                         newMessage.setSentAt(LocalDateTime.now(TZ));
 
-                        waMessageRepository.save(newMessage);
+                        return waMessageRepository.save(newMessage);
                     });
         }
-        return null;
     }
+
 
 
     // ======== TIPOS ========

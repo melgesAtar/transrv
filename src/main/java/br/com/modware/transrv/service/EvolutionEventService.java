@@ -8,30 +8,27 @@ import br.com.modware.transrv.model.WAMessage;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
 
 @Service
 public class EvolutionEventService {
 
-    private final InstanceEvolutionService instanceEvolutionService;
+
     private final WAGroupService groupService;
     private final WAMessageService messageService;
     private final WAContactService waContactService;
     private final WAConversationService waConversationService;
+    private final AiClassifier aiClassifier;
     org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EvolutionEventService.class);
 
 
 
 
-    public EvolutionEventService(InstanceEvolutionService instanceEvolutionService, WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService) {
-        this.instanceEvolutionService = instanceEvolutionService;
+    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier) {
         this.groupService = groupService;
         this.messageService = messageService;
         this.waContactService = waContactService;
         this.waConversationService = waConversationService;
+        this.aiClassifier = aiClassifier;
     }
 
 
@@ -59,7 +56,13 @@ public class EvolutionEventService {
         WAContact waContact = waContactService.findOrCreateWaContact(eventEvolution.getData().getKey().getParticipant().replace("@s.whatsapp.net", "") , eventEvolution.getData().getPushName());
         WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact);
 
+        if (waMessage != null) {
+            String responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent());
+            log.info("OpenAI response: " + responseOpenAi);
 
+        } else {
+            log.warn("No message to save for group: " + WAGroup.getEvolutionGroupId());
+        }
     }
 
 

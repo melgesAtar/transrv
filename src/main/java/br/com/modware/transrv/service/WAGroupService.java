@@ -1,6 +1,5 @@
 package br.com.modware.transrv.service;
 
-import br.com.modware.transrv.model.InstanceEvolution;
 import br.com.modware.transrv.model.WAConversation;
 import br.com.modware.transrv.model.WAGroup;
 import br.com.modware.transrv.repository.WAGroupRepository;

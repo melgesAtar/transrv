@@ -1,7 +1,5 @@
 package br.com.modware.transrv.service;
 
-
-
 import br.com.modware.transrv.model.WAContact;
 import br.com.modware.transrv.repository.WAContactRepository;
 import org.springframework.stereotype.Service;
