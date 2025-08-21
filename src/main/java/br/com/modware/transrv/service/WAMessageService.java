@@ -1,14 +1,12 @@
 package br.com.modware.transrv.service;
 
-import br.com.modware.transrv.dto.EventEvolution;
+import br.com.modware.transrv.dto.evolution.EventEvolution;
 import br.com.modware.transrv.model.WAContact;
 import br.com.modware.transrv.model.WAConversation;
 import br.com.modware.transrv.model.WAMessage;
 import br.com.modware.transrv.repository.WAMessageRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -38,7 +36,6 @@ public class WAMessageService {
     private static final String MODEL_VISION = "gpt-4.1-mini";
     private static final String MODEL_TRANSCRIBE = "gpt-4o-transcribe";
     private static final long MAX_DOC_BYTES = 5L * 1024 * 1024; // 3 MiB
-    private static final ZoneId TZ = ZoneId.of("America/Sao_Paulo");
     private final ObjectMapper mapper = new ObjectMapper();
     private final WAMessageRepository waMessageRepository;
     private final RestTemplate restTemplate = new RestTemplate();
@@ -78,7 +75,7 @@ public class WAMessageService {
                         newMessage.setEvolutionMessageId(eventEvolution.getData().getKey().getId());
                         newMessage.setSender(waContact);
                         newMessage.setMessageContent(contentMessage);
-                        newMessage.setSentAt(LocalDateTime.now(TZ));
+                        newMessage.setSentAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
 
                         return waMessageRepository.save(newMessage);
                     });
@@ -276,136 +273,89 @@ public class WAMessageService {
         }
     }
 
+
+
+    // === HELPER: extrai texto com Tika (suporta xlsx, docx, pptx, pdf, csv, txt, etc.) ===
+    private String extractText(File file) {
+        try (java.io.InputStream is = Files.newInputStream(file.toPath())) {
+            org.apache.tika.Tika tika = new org.apache.tika.Tika();
+            // Limita para evitar textos absurdamente grandes
+            tika.setMaxStringLength(2_000_000); // ~2M chars
+            return tika.parseToString(is);
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao extrair texto com Tika: " + e.getMessage(), e);
+        }
+    }
+
+    // === HELPER: chama chat/completions com texto puro ===
+    private String summarizeWithOpenAI(String userText) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(openaiApiKey);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // Prompt simples e direto
+            String system = "Você é um assistente que resume documentos de forma clara e objetiva em português.";
+            String user = "Resuma em 5-7 bullets e cite seções/abas quando houver.\n\nConteúdo:\n" + userText;
+
+            // Limitar texto para evitar estouro de tokens (ajuste se quiser)
+            if (user.length() > 200_000) {
+                user = user.substring(0, 200_000) + "\n\n[...conteúdo truncado...]";
+            }
+
+            // Monta payload do chat/completions
+            String payload = """
+        {
+          "model": "gpt-4o-mini",
+          "temperature": 0.2,
+          "max_tokens": 400,
+          "messages": [
+            { "role": "system", "content": %s },
+            { "role": "user",   "content": %s }
+          ]
+        }
+        """.formatted(mapper.writeValueAsString(system), mapper.writeValueAsString(user));
+
+            ResponseEntity<String> resp = restTemplate.postForEntity(
+                    BASE_URL + "/chat/completions",
+                    new HttpEntity<>(payload, headers),
+                    String.class
+            );
+
+            if (!resp.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("OpenAI retornou " + resp.getStatusCode() + ": " + resp.getBody());
+            }
+
+            JsonNode root = mapper.readTree(resp.getBody());
+            JsonNode choice0 = root.path("choices").path(0).path("message").path("content");
+            String out = choice0.isMissingNode() ? null : choice0.asText();
+            return (out != null && !out.isBlank()) ? out : "Não foi possível gerar resumo.";
+        } catch (Exception e) {
+            throw new RuntimeException("Erro no resumo com OpenAI: " + e.getMessage(), e);
+        }
+    }
+
+    // === SUBSTITUA seu método processDocumentMessage por este (BÁSICO) ===
     private String processDocumentMessage(EventEvolution eventEvolution) {
-        // Converte o base64 em arquivo temporário
         File docFile = base64ToFile(eventEvolution, "documentMessage");
 
-        // ✅ Limite de 3 MB
         try {
             long size = Files.size(docFile.toPath());
-            if (size > MAX_DOC_BYTES) {
-                return "USUARIO ENVIOU UM ARQUIVO COM MAIS DE 3MB";
+            if (size > 5L * 1024 * 1024) { // 5 MiB
+                return "USUARIO ENVIOU UM ARQUIVO COM MAIS DE 5MB";
             }
         } catch (IOException e) {
             throw new RuntimeException("Não foi possível verificar o tamanho do arquivo: " + e.getMessage(), e);
         }
 
-        try {
-            // Detecta MIME do evento ou do arquivo
-            String mimeFromEvent = (eventEvolution.getData().getMessage().getDocumentMessage() != null)
-                    ? eventEvolution.getData().getMessage().getDocumentMessage().getMimeType()
-                    : null;
-            String detectedMime = (mimeFromEvent != null && !mimeFromEvent.isBlank())
-                    ? mimeFromEvent
-                    : Files.probeContentType(docFile.toPath());
-            if (detectedMime == null || detectedMime.isBlank()) detectedMime = "application/pdf";
-
-            // Extensão amigável para o upload
-            String ext = switch (detectedMime) {
-                case "application/pdf" -> "pdf";
-                case "application/msword" -> "doc";
-                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> "docx";
-                case "application/vnd.ms-powerpoint" -> "ppt";
-                case "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> "pptx";
-                case "application/vnd.ms-excel" -> "xls";
-                case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> "xlsx";
-                case "text/plain" -> "txt";
-                case "text/csv" -> "csv";
-                default -> "pdf";
-            };
-            String goodFilename = "document." + ext;
-
-            byte[] bytes = Files.readAllBytes(docFile.toPath());
-
-            // 1) Upload na Files API
-            HttpHeaders upHeaders = new HttpHeaders();
-            upHeaders.setBearerAuth(openaiApiKey);
-            upHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-            var body = new LinkedMultiValueMap<String, Object>();
-            body.add("purpose", "assistants");
-
-            HttpHeaders fileHeaders = new HttpHeaders();
-            fileHeaders.setContentType(MediaType.parseMediaType(detectedMime));
-
-            ByteArrayResource filePart = new ByteArrayResource(bytes) {
-                @Override public String getFilename() { return goodFilename; }
-            };
-            HttpEntity<ByteArrayResource> fileEntity = new HttpEntity<>(filePart, fileHeaders);
-            body.add("file", fileEntity);
-
-            ResponseEntity<String> uploadResp = restTemplate.postForEntity(
-                    BASE_URL + "/files",
-                    new HttpEntity<>(body, upHeaders),
-                    String.class
-            );
-            if (!uploadResp.getStatusCode().is2xxSuccessful()) {
-                throw new RuntimeException("Upload do documento falhou: " + uploadResp.getStatusCode() + " - " + uploadResp.getBody());
-            }
-            String fileId = mapper.readTree(uploadResp.getBody()).path("id").asText();
-            if (fileId == null || fileId.isBlank()) {
-                throw new RuntimeException("Upload OK, mas sem file id: " + uploadResp.getBody());
-            }
-
-            // 2) Chamada ao /responses pedindo resumo
-            String payload = """
-        {
-          "model": "%s",
-          "input": [
-            {
-              "role": "user",
-              "content": [
-                { "type": "input_text", "text": "Resuma o documento em 5-7 linhas. Se houver seções, cite os títulos e os principais pontos." },
-                { "type": "input_file", "file_id": "%s" }
-              ]
-            }
-          ]
+        // 1) Extrai texto localmente (SEM mandar arquivo para a OpenAI)
+        String text = extractText(docFile);
+        if (text == null || text.isBlank()) {
+            return "Não consegui extrair texto do arquivo (talvez esteja vazio ou protegido).";
         }
-        """.formatted(MODEL_VISION, fileId);
 
-            HttpHeaders respHeaders = new HttpHeaders();
-            respHeaders.setBearerAuth(openaiApiKey);
-            respHeaders.setContentType(MediaType.APPLICATION_JSON);
-
-            ResponseEntity<String> resp = restTemplate.postForEntity(
-                    BASE_URL + "/responses",
-                    new HttpEntity<>(payload, respHeaders),
-                    String.class
-            );
-            if (!resp.getStatusCode().is2xxSuccessful()) {
-                throw new RuntimeException("Responses falhou: " + resp.getStatusCode() + " - " + resp.getBody());
-            }
-
-            // 3) Extrai o texto de saída
-            JsonNode json = mapper.readTree(resp.getBody());
-            JsonNode convenience = json.get("output_text");
-            if (convenience != null && !convenience.isNull()) {
-                return convenience.asText();
-            }
-
-            StringBuilder sb = new StringBuilder();
-            JsonNode outputArr = json.path("output");
-            if (outputArr.isArray()) {
-                for (JsonNode msg : outputArr) {
-                    JsonNode contentArr = msg.path("content");
-                    if (contentArr.isArray()) {
-                        for (JsonNode c : contentArr) {
-                            if ("output_text".equals(c.path("type").asText())) {
-                                String t = c.path("text").asText(null);
-                                if (t != null && !t.isBlank()) {
-                                    if (sb.length() > 0) sb.append("\n");
-                                    sb.append(t);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return (sb.length() > 0) ? sb.toString() : resp.getBody();
-
-        } catch (IOException e) {
-            throw new RuntimeException("Erro ao resumir documento: " + e.getMessage(), e);
-        }
+        // 2) Manda só TEXTO para o chat/completions e pega o resumo
+        return summarizeWithOpenAI(text);
     }
 
 
@@ -415,13 +365,13 @@ public class WAMessageService {
         String mime = switch (typeMessage) {
             case "audioMessage" -> eventEvolution.getData().getMessage().getAudioMessage().getMimetype();
             case "imageMessage" -> eventEvolution.getData().getMessage().getImageMessage().getMimetype();
-
+            case "documentMessage" -> eventEvolution.getData().getMessage().getDocumentMessage().getMimeType();
             default -> null;
         };
 
         try {
             byte[] decoded = java.util.Base64.getDecoder().decode(base64);
-            String ts = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS").format(LocalDateTime.now(TZ));
+            String ts = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS").format(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
 
             String ext = (mime != null && mime.contains("ogg")) ? ".ogg"
                     : (mime != null && mime.contains("mp3")) ? ".mp3"
@@ -434,6 +384,7 @@ public class WAMessageService {
                     : (mime != null && mime.contains("png")) ? ".png"
                     : (mime != null && mime.contains("gif")) ? ".gif"
                     : (mime != null && mime.contains("webp")) ? ".webp"
+                    : (mime != null && mime.contains("xlsx")) ? ".xlsx"
                     : ".tmp";
 
             Path tmpPath = Files.createTempFile("file_" + ts + "_", ext);
@@ -449,4 +400,9 @@ public class WAMessageService {
             throw new RuntimeException("Erro base64->file: " + e.getMessage(), e);
         }
     }
+
+    public WAMessage saveMessage(WAMessage waMessage) {
+        return waMessageRepository.save(waMessage);
+}
+
 }

@@ -1,5 +1,11 @@
 package br.com.modware.transrv.service;
 
+import br.com.modware.transrv.dto.openai.AiClassifierResponse;
+import br.com.modware.transrv.dto.openai.ResponseClassifierMessage;
+import br.com.modware.transrv.exception.AgentNotFoundException;
+import br.com.modware.transrv.exception.OpenAIException;
+import br.com.modware.transrv.model.Agent;
+import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -8,48 +14,48 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 @Service
 public class AiClassifier {
+
     @Value("${openai.api.key}")
     private String openAiApiKey;
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
+    private final AgentService agentService;
+    private final AlertTermsService alertTermsService;
 
-    public String ticketClassification(String messageContent) {
+    public AiClassifier(AgentService agentService, AlertTermsService alertTermsService) {
+        this.agentService = agentService;
+        this.alertTermsService = alertTermsService;
+    }
+
+    public ResponseClassifierMessage ticketClassification(String messageContent) {
         try {
-
-            String prompt = "Você está analisando mensagens de um grupo de WhatsApp de uma transportadora. "
-                    + "Sua tarefa é decidir se a mensagem precisa de abertura de ticket, isto é, se alguém precisa responder aquela mensagem ou não.\n"
-                    + "- Se a mensagem não requer resposta → devolva \"should_open\": false.\n"
-                    + "- Se a mensagem requer resposta → devolva \"should_open\": true e informe qual termo de alerta da lista se encaixa.\n"
-                    + "- Caso nenhum termo se aplique, devolva \"should_open\": true com \"alert_term\": \"outro\" apenas se a mensagem ainda assim parecer que precisa de ação.\n"
-                    + "- Saída sempre em JSON válido.\n\n"
-                    + "Lista de termos de alerta:\n"
-                    + "- Risco ETA ORIGEM\n- Perda ETA ORIGEM\n- Perda ETA Destino\n- Notificação motoristas ->48hr\n"
-                    + "- Problema mecânico\n- Acidente\n- Descarga / descarregar\n- Ocorrência\n- Defesa\n- No Show / No show\n"
-                    + "- 5 por ques\n- 5W2H\n- Quebra de PGR\n- Raster\n- T4S\n- Veículo bloqueado\n- Carreta carregada\n"
-                    + "- Infrutífero\n- Liberado vazio\n- Minuta divergente\n- Minuta errada\n- Risco ETA Destino\n"
-                    + "- Risco de impacto\n- Rota cancelada\n- Vrid cancelado";
+            Optional<Agent> agentClassificationMessages  = agentService.findByName("Transportadora - Classificação de Mensagens");
+            if (agentClassificationMessages.isEmpty()) {
+                throw new AgentNotFoundException("Agent 'Transportadora - Classificação de Mensagens' not found");
+            }
+            String prompt = agentClassificationMessages.get().getPrompt() + "\n"+ alertTermsService.findAllActiveAlertTerms()
+                    .stream()
+                    .map(term -> term.getCode())
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse("");;
 
             String requestBody = """
 {
   "model": "gpt-4o-mini",
   "temperature": 0.1,
+  "max_tokens": 150,
+  "response_format": { "type": "json_object" },
   "messages": [
-    {
-      "role": "system",
-      "content": "Você está analisando mensagens de um grupo de WhatsApp de uma transportadora. Sua tarefa é decidir se a mensagem precisa de abertura de ticket, isto é, se alguém precisa responder aquela mensagem ou não. Se a mensagem não requer resposta devolva {\\\"should_open\\\": false}. Se a mensagem requer resposta devolva {\\\"should_open\\\": true, \\\"alert_term\\\": \\\"<termo da lista>\\\"}. Lista de termos: Risco ETA ORIGEM, Perda ETA ORIGEM, Perda ETA Destino, Notificação motoristas ->48hr, Problema mecânico, Acidente, Descarga / descarregar, Ocorrência, Defesa, No Show, 5 por ques, 5W2H, Quebra de PGR, Raster, T4S, Veículo bloqueado, Carreta carregada, Infrutífero, Liberado vazio, Minuta divergente, Minuta errada, Risco ETA Destino, Risco de impacto, Rota cancelada, Vrid cancelado."
-    },
-    {
-      "role": "user",
-      "content": "%s"
-    }
+    { "role": "system", "content": %s },
+    { "role": "user",   "content": %s }
   ]
 }
-""".formatted(messageContent.replace("\"", "\\\""));
+""".formatted(toJsonString(prompt), toJsonString(messageContent));
 
 
-            // Criar cliente HTTP
             HttpClient client = HttpClient.newHttpClient();
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -60,12 +66,24 @@ public class AiClassifier {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            String body = response.body();
+            System.out.println("OpenAI status=" + response.statusCode() + " body=" + body);
 
-            return response.body();
+            Gson gson = new Gson();
+
+            if (response.statusCode() / 100 != 2) {
+                throw new OpenAIException("OpenAI 400/4xx: " + body);
+            }
+
+            return gson.fromJson(body, ResponseClassifierMessage.class);
 
         } catch (Exception e) {
-            e.printStackTrace();
-            return "{\"error\": \"Erro ao classificar mensagem\"}";
+            throw new OpenAIException("Failed to classify message with OpenAI + " + e.getMessage());
         }
     }
+
+    private static String toJsonString(String s) {
+        return new Gson().toJson(s);
+    }
+
 }

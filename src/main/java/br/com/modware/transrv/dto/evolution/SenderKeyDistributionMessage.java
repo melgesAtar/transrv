@@ -1,4 +1,4 @@
-package br.com.modware.transrv.dto;
+package br.com.modware.transrv.dto.evolution;
 
 import lombok.Data;
 

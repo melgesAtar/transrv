@@ -1,12 +1,14 @@
 package br.com.modware.transrv.service;
 
-import br.com.modware.transrv.dto.EventEvolution;
-import br.com.modware.transrv.model.WAContact;
-import br.com.modware.transrv.model.WAConversation;
-import br.com.modware.transrv.model.WAGroup;
-import br.com.modware.transrv.model.WAMessage;
+import br.com.modware.transrv.dto.evolution.EventEvolution;
+import br.com.modware.transrv.dto.openai.AiClassifierResponse;
+import br.com.modware.transrv.dto.openai.ResponseClassifierMessage;
+import br.com.modware.transrv.model.*;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 
 @Service
@@ -18,17 +20,24 @@ public class EvolutionEventService {
     private final WAContactService waContactService;
     private final WAConversationService waConversationService;
     private final AiClassifier aiClassifier;
+    private final UsageService usageService;
+    private final WAMessageService waMessageService;
+    private final AlertTermsService alertTermsService;
+
     org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EvolutionEventService.class);
 
 
 
 
-    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier) {
+    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, UsageService usageService, WAMessageService waMessageService, AlertTermsService alertTermsService) {
         this.groupService = groupService;
         this.messageService = messageService;
         this.waContactService = waContactService;
         this.waConversationService = waConversationService;
         this.aiClassifier = aiClassifier;
+        this.usageService = usageService;
+        this.waMessageService = waMessageService;
+        this.alertTermsService = alertTermsService;
     }
 
 
@@ -57,8 +66,32 @@ public class EvolutionEventService {
         WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact);
 
         if (waMessage != null) {
-            String responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent());
-            log.info("OpenAI response: " + responseOpenAi);
+
+                ResponseClassifierMessage responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent());
+                String contentJson = responseOpenAi.getChoices().get(0).getMessage().getContent();
+                Gson gson = new Gson();
+                AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
+
+                log.info("AI Usage: " + responseOpenAi.getUsage());
+
+                AIUsage aiUsage =   new AIUsage(responseOpenAi.getUsage().getPromptTokens(), responseOpenAi.getUsage().getCompletionTokens(),
+                    responseOpenAi.getUsage().getTotalTokens() , LocalDateTime.now(ZoneId.of("America/Sao_Paulo")), waMessage);
+                    usageService.saveUsage(aiUsage);
+
+
+            if (classifierResponse.isShouldOpen()) {
+                String alertCode = classifierResponse.getAlertTerm();
+
+                alertTermsService.findActiveByCode(alertCode)
+                        .ifPresentOrElse(alertTerm -> {
+                            waMessage.setAlertTerm(alertTerm);
+                            waMessageService.saveMessage(waMessage);
+                        }, () -> {
+                            log.warn("AlertTerm código '{}' não encontrado ou INACTIVE", alertCode);
+                        });
+            }
+
+
 
         } else {
             log.warn("No message to save for group: " + WAGroup.getEvolutionGroupId());

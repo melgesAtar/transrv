@@ -1,6 +1,5 @@
-package br.com.modware.transrv.dto;
+package br.com.modware.transrv.dto.evolution;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 @lombok.Data
 public class Data {
     private Key key;

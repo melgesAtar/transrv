@@ -1,10 +1,8 @@
 package br.com.modware.transrv.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
 
 
 @Entity
@@ -14,6 +12,9 @@ public class Agent {
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private Long id;
     private String name;
+    @Column(name = "prompt", columnDefinition = "TEXT")
+    @Getter
     private String prompt;
+
 
 }

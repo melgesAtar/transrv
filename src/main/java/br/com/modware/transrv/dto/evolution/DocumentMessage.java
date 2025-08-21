@@ -1,8 +1,10 @@
-package br.com.modware.transrv.dto;
+package br.com.modware.transrv.dto.evolution;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class DocumentMessage {
     private String url;
-    private String mimeType;
+    private String mimetype;
     private String title;
     private String fileSha256;
     private String fileLength;
@@ -21,6 +23,10 @@ public class DocumentMessage {
     private Integer thumbnailWidth;
 
     public String getMimeType() {
-        return mimeType;
+        return mimetype;
+    }
+
+    public String getFileName() {
+        return fileName;
     }
 }
