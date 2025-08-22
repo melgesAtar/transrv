@@ -5,6 +5,7 @@ import br.com.modware.transrv.dto.openai.AiClassifierResponse;
 import br.com.modware.transrv.dto.openai.ResponseClassifierMessage;
 import br.com.modware.transrv.model.*;
 import com.google.gson.Gson;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,13 +24,12 @@ public class EvolutionEventService {
     private final UsageService usageService;
     private final WAMessageService waMessageService;
     private final AlertTermsService alertTermsService;
+    private final TicketService ticketService;
 
     org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EvolutionEventService.class);
 
 
-
-
-    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, UsageService usageService, WAMessageService waMessageService, AlertTermsService alertTermsService) {
+    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, UsageService usageService, WAMessageService waMessageService, AlertTermsService alertTermsService, TicketService ticketService) {
         this.groupService = groupService;
         this.messageService = messageService;
         this.waContactService = waContactService;
@@ -38,6 +38,7 @@ public class EvolutionEventService {
         this.usageService = usageService;
         this.waMessageService = waMessageService;
         this.alertTermsService = alertTermsService;
+        this.ticketService = ticketService;
     }
 
 
@@ -86,6 +87,7 @@ public class EvolutionEventService {
                         .ifPresentOrElse(alertTerm -> {
                             waMessage.setAlertTerm(alertTerm);
                             waMessageService.saveMessage(waMessage);
+                           Ticket ticket=  ticketService.openTicket(waMessage, alertTerm, waContact, WAGroup);
                         }, () -> {
                             log.warn("AlertTerm código '{}' não encontrado ou INACTIVE", alertCode);
                         });

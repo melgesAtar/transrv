@@ -27,6 +27,13 @@ public class WAMessage {
     @JoinColumn(name = "alert_term_id")
     private AlertTerm alertTerm;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "ticket_id")
+    private Ticket ticket;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "wa_group_id")
+    private WAGroup waGroup;
 
     private LocalDateTime sentAt;
 

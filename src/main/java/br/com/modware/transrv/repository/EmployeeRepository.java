@@ -1,5 +1,6 @@
 package br.com.modware.transrv.repository;
 
+import br.com.modware.transrv.model.AlertTerm;
 import br.com.modware.transrv.model.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,4 +15,5 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "where t.code = :code and t.status = 'ACTIVE'")
     List<Employee> findByAlertTermCode(String code);
 
+    List<Employee> findByPriorityLevelAndAlertTermsContains(int level, AlertTerm alertTerm);
 }
