@@ -1,9 +1,6 @@
 package br.com.modware.transrv.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -13,22 +10,32 @@ import java.time.LocalDateTime;
 public class Ticket {
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
-    private String id;
+    private Long id;
     private Integer currentEscalationLevel = 1;
+
+    @ManyToOne
+    @JoinColumn(name = "alert_term_id", nullable = false)
     private AlertTerm alertTerm;
-    @OneToOne
-    private Employee employeeResponsibleForOpeningTheCall;
-    @OneToOne
-    private Employee employeeResponsibleForClosingTheCall;
+
+    @ManyToOne
+    @JoinColumn(name = "contact_open_id")
+    private WAContact contactResponsibleForOpeningTheCall;
+
+    @ManyToOne
+    @JoinColumn(name = "contact_close_id")
+    private WAContact contactResponsibleForClosingTheCall;
+
     @OneToOne
     private WAMessage messageResponsibleForOpeningTheCall;
+
     @OneToOne
     private WAMessage messageResponsibleForClosingTheCall;
+
     private LocalDateTime createdAt;
     private LocalDateTime closedAt;
     private Status status;
 
-    @OneToOne(optional = true)
+    @ManyToOne
     private WAGroup waGroup;
 
 
@@ -36,5 +43,13 @@ public class Ticket {
         OPEN,
         CLOSED,
         CLOSED_WITHOUT_SOLUTION,
+    }
+
+    public String toString() {
+        return "Ticket{" +
+                "id=" + id +
+                ", currentEscalationLevel=" + currentEscalationLevel +
+                ", status=" + status +
+                '}';
     }
 }

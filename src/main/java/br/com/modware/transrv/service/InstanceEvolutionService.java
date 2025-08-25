@@ -37,7 +37,7 @@ public class InstanceEvolutionService {
     }
 
     public void sendMessageToEmployee(WAGroup waGroup, Employee employee, Ticket ticket , int level) {
-        String messageContent = String.format("Novo ticket aberto no grupo %s, ALERTA: %s, conteúdo da mensagem: %s", waGroup.getGroupName(), ticket.getAlertTerm(), ticket.getMessageResponsibleForOpeningTheCall().getMessageContent() + "encerre esse chamado respondendo a mensagem no grupo, ou enviando uma mensagem contendo o ID do chamado no grupo \n\n" + "NIVEL DE PRIORIDADE MENSAGEM: " + level);
+        String messageContent = String.format("Novo ticket aberto no grupo %s, ALERTA: %s, conteúdo da mensagem: %s", waGroup.getGroupName(), ticket.getAlertTerm().getCode(), ticket.getMessageResponsibleForOpeningTheCall().getMessageContent() + ", encerre esse chamado respondendo a mensagem no grupo, ou enviando uma mensagem contendo o ID do chamado no grupo : " + ticket.getId() +"\n\n\nNIVEL DE PRIORIDADE MENSAGEM: " + level);
         SendPlainText sendPlainText = new SendPlainText();
         sendPlainText.setNumber(employee.getWaContact().getPhoneNumber());
         sendPlainText.setText(messageContent);
@@ -49,6 +49,8 @@ public class InstanceEvolutionService {
         }
     }
     private void sendMessage(SendPlainText sendPlainText) throws IOException, InterruptedException {
+        String url = EVOLUTION_API_URL + "/message/sendText/" + "transRV";
+
         String json = MAPPER.writeValueAsString(sendPlainText);
 
         HttpClient httpClient = HttpClient.newBuilder()
@@ -56,7 +58,7 @@ public class InstanceEvolutionService {
                 .build();
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(EVOLUTION_API_URL))
+                .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(10))
                 .header("Content-Type", "application/json")
                 .header("apikey", apiKey)

@@ -1,6 +1,7 @@
 package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
@@ -15,6 +16,8 @@ public class AIUsage {
     private int totalTokens;
     private LocalDateTime createdAt;
     @OneToOne
+    @JoinColumn(name = "message_id", unique = true)
+    @Getter
     private WAMessage message;
 
     public AIUsage(int promptTokens, int completionTokens, int totalTokens, LocalDateTime createdAt, WAMessage message) {

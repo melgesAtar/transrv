@@ -21,8 +21,9 @@ public class Employee {
     @Getter
     private WAContact waContact;
 
+    @Getter
     private LocalTime enterTime;
-
+    @Getter
     private LocalTime exitTime;
 
     private Integer priorityLevel;
@@ -31,13 +32,14 @@ public class Employee {
     @JoinColumn(name = "department_id")
     private Department department;
 
+    // Employee.java
     @ManyToMany
     @JoinTable(
             name = "employee_alert_term",
             joinColumns = @JoinColumn(name = "employee_id"),
-            inverseJoinColumns = @JoinColumn(name = "alert_term_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id","alert_term_id"})
+            inverseJoinColumns = @JoinColumn(name = "alert_term_id")
     )
     private Set<AlertTerm> alertTerms = new HashSet<>();
+
 
 }

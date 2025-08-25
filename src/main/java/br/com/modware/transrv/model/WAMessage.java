@@ -37,4 +37,13 @@ public class WAMessage {
 
     private LocalDateTime sentAt;
 
+
+    @Override
+    public String toString() {
+        return "WAMessage{" +
+                "id=" + id +
+                ", messageContent='" + messageContent + '\'' +
+                '}';
+    }
+
 }

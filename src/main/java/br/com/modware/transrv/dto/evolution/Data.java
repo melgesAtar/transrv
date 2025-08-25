@@ -6,6 +6,7 @@ public class Data {
     private String pushName;
     private String status;
     private Message message;
+    private ContextInfo contextInfo;
     private String messageType;
     private String messageTimeStamp;
     private String instanceId;

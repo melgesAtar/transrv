@@ -13,5 +13,4 @@ import java.util.Optional;
 public interface WAGroupRepository extends JpaRepository<WAGroup, Long> {
     Optional<WAGroup> findByEvolutionGroupId(String groupId);
 
-    boolean existsByWAContactAndWAGroupAndAlertTerm(WAContact waContact, WAGroup waGroup, AlertTerm alertTerm, Page pageRequest);
 }

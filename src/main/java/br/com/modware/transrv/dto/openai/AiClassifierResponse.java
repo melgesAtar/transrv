@@ -7,9 +7,9 @@ import lombok.Data;
 @Data
 public class AiClassifierResponse {
     @SerializedName("should_open")
-    boolean shouldOpen;
+    private boolean shouldOpen;
     @SerializedName("alert_term")
-    String alertTerm;
+    private String alertTerm;
 
     public String toString() {
         return "AiClassifierResponse{" +
