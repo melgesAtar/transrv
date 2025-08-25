@@ -3,6 +3,7 @@ package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
 
 @Entity
 @Table(name = "wa_group")
@@ -12,6 +13,7 @@ public class WAGroup {
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private Long id;
     private String evolutionGroupId;
+    @Getter
     private String groupName;
     @OneToOne
     private WAConversation WAConversation;
@@ -19,5 +21,6 @@ public class WAGroup {
     @JoinColumn(name = "agent_id", nullable = true)
     private Agent agent;
     private boolean isMonitored;
+
 
 }

@@ -1,6 +1,7 @@
 package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 import java.time.LocalTime;
 import java.util.HashSet;
@@ -17,6 +18,7 @@ public class Employee {
 
     @OneToOne
     @JoinColumn(name = "wa_contact_id")
+    @Getter
     private WAContact waContact;
 
     private LocalTime enterTime;
