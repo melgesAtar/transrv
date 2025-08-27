@@ -113,7 +113,6 @@ public class WAMessageService {
         return contentMessage;
     }
 
-
     // ======== AUX ========
 
     private String getAudioTranscription(File audioFile) {
@@ -168,7 +167,6 @@ public class WAMessageService {
     }
 
     private String getImageDescription(File imageFile) {
-
 
         if (openaiApiKey == null || openaiApiKey.isEmpty()) {
             throw new IllegalStateException("OpenAI API key não configurada.");
@@ -275,7 +273,6 @@ public class WAMessageService {
 
 
 
-    // === HELPER: extrai texto com Tika (suporta xlsx, docx, pptx, pdf, csv, txt, etc.) ===
     private String extractText(File file) {
         try (java.io.InputStream is = Files.newInputStream(file.toPath())) {
             org.apache.tika.Tika tika = new org.apache.tika.Tika();
@@ -287,7 +284,7 @@ public class WAMessageService {
         }
     }
 
-    // === HELPER: chama chat/completions com texto puro ===
+
     private String summarizeWithOpenAI(String userText) {
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -335,8 +332,9 @@ public class WAMessageService {
         }
     }
 
-    // === SUBSTITUA seu método processDocumentMessage por este (BÁSICO) ===
+
     private String processDocumentMessage(EventEvolution eventEvolution) {
+
         File docFile = base64ToFile(eventEvolution, "documentMessage");
 
         try {
@@ -385,6 +383,9 @@ public class WAMessageService {
                     : (mime != null && mime.contains("gif")) ? ".gif"
                     : (mime != null && mime.contains("webp")) ? ".webp"
                     : (mime != null && mime.contains("xlsx")) ? ".xlsx"
+                    : (mime != null && mime.contains("xls")) ? ".xls"
+                    : (mime != null && mime.contains("csv")) ? ".csv"
+                    : (mime != null && mime.contains("pdf")) ? ".pdf"
                     : ".tmp";
 
             Path tmpPath = Files.createTempFile("file_" + ts + "_", ext);

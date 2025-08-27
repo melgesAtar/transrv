@@ -14,6 +14,7 @@ public class Employee {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Getter
     private String name;
 
     @OneToOne
@@ -32,14 +33,7 @@ public class Employee {
     @JoinColumn(name = "department_id")
     private Department department;
 
-    // Employee.java
-    @ManyToMany
-    @JoinTable(
-            name = "employee_alert_term",
-            joinColumns = @JoinColumn(name = "employee_id"),
-            inverseJoinColumns = @JoinColumn(name = "alert_term_id")
-    )
-    private Set<AlertTerm> alertTerms = new HashSet<>();
-
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<EmployeeAlertTerm> employeeAlertTerms = new HashSet<>();
 
 }

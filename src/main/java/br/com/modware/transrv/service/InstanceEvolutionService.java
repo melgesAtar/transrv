@@ -2,53 +2,64 @@ package br.com.modware.transrv.service;
 
 import br.com.modware.transrv.dto.evolution.sendMessage.SendPlainText;
 import br.com.modware.transrv.model.*;
-import br.com.modware.transrv.repository.InstanceEvolutionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.List;
+
 
 @Service
 public class InstanceEvolutionService {
+
     private final static String EVOLUTION_API_URL = "https://evolution1.modware.com.br";
+
     @Value("${evolution.api.key}")
     private String apiKey;
+
     static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final InstanceEvolutionRepository instanceEvolutionRepository;
+    private final Logger log = org.slf4j.LoggerFactory.getLogger(InstanceEvolutionService.class);
 
-    public InstanceEvolutionService(InstanceEvolutionRepository instanceEvolutionRepository) {
-        this.instanceEvolutionRepository = instanceEvolutionRepository;
-    }
 
-    public boolean existsByInstanceName(String instanceName){
-        return instanceEvolutionRepository.existsByInstanceName(instanceName);
-    }
+    public boolean sendMessageToPhone(String phoneNumber, String employeeNames, Ticket ticket, int level, WAGroup waGroup) {
+        String messageContent = String.format(
+                "*🚨 Novo Ticket Aberto*\n\n" +
+                        "*Grupo:* %s\n" +
+                        "*Alerta:* %s\n" +
+                        "*Mensagem:* %s\n\n" +
+                        "➡️ Responsáveis notificados: %s\n\n" +
+                        "Para encerrar este chamado, responda a mensagem no grupo ou envie uma mensagem com o *ID* abaixo:\n\n" +
+                        "*ID do Chamado:* %d\n" +
+                        "*Nível de Prioridade:* %d",
+                waGroup.getGroupName(),
+                ticket.getAlertTerm().getCode(),
+                ticket.getMessageResponsibleForOpeningTheCall().getMessageContent(),
+                employeeNames,
+                ticket.getId(),
+                level
+        );
 
-    List<InstanceEvolution> findAll() {
-        return instanceEvolutionRepository.findAll();
-    }
-
-    public void sendMessageToEmployee(WAGroup waGroup, Employee employee, Ticket ticket , int level) {
-        String messageContent = String.format("Novo ticket aberto no grupo %s, ALERTA: %s, conteúdo da mensagem: %s", waGroup.getGroupName(), ticket.getAlertTerm().getCode(), ticket.getMessageResponsibleForOpeningTheCall().getMessageContent() + ", encerre esse chamado respondendo a mensagem no grupo, ou enviando uma mensagem contendo o ID do chamado no grupo : " + ticket.getId() +"\n\n\nNIVEL DE PRIORIDADE MENSAGEM: " + level);
         SendPlainText sendPlainText = new SendPlainText();
-        sendPlainText.setNumber(employee.getWaContact().getPhoneNumber());
+        sendPlainText.setNumber(phoneNumber);
         sendPlainText.setText(messageContent);
         sendPlainText.setLinkPreview(true);
+
         try {
             sendMessage(sendPlainText);
+            return true;
         } catch (InterruptedException | IOException e) {
             e.printStackTrace();
         }
+        return false;
     }
-    private void sendMessage(SendPlainText sendPlainText) throws IOException, InterruptedException {
+
+    private boolean sendMessage(SendPlainText sendPlainText) throws IOException, InterruptedException {
         String url = EVOLUTION_API_URL + "/message/sendText/" + "transRV";
 
         String json = MAPPER.writeValueAsString(sendPlainText);
@@ -69,9 +80,11 @@ public class InstanceEvolutionService {
 
         if (response.statusCode() / 100 == 2) {
             System.out.println("OK: " + response.body());
+            return true;
 
         } else {
-            throw new RuntimeException("Falha: " + response.statusCode() + " -> " + response.body());
+            log.info("Error: " + response.statusCode() + " - " + response.body());
+            return false;
         }
     }
 

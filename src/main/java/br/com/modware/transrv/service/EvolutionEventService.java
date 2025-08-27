@@ -62,7 +62,7 @@ public class EvolutionEventService {
 
     }
     private void processGroupMessage(EventEvolution eventEvolution, WAGroup WAGroup) throws SchedulerException {
-        log.info("Processing message for group: " + WAGroup.getEvolutionGroupId());
+        log.info("Processing message for group: " + WAGroup.getGroupName() + "ID: " + WAGroup.getId());
 
         WAConversation waConversation = WAGroup.getWAConversation();
         if (waConversation == null || waConversation.getId() == null) {
@@ -77,7 +77,6 @@ public class EvolutionEventService {
         );
 
         WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact);
-
 
         boolean closed = ticketService.tryCloseTicket(
                 eventEvolution.getData().getContextInfo() != null ? eventEvolution.getData().getContextInfo().getStanzaId() : null,

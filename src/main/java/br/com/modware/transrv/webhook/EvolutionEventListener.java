@@ -21,7 +21,7 @@ public class EvolutionEventListener {
         this.evolutionEventService = evolutionEventService;
     }
 
-    @PostMapping
+    @PostMapping("/messages-upsert")
     public ResponseEntity<Void> receiveMessageUpsertEvent(@RequestBody String payload) {
         try {
             evolutionEventService.processEvent(payload);

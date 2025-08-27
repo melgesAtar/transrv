@@ -6,6 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 
 @Entity
@@ -26,12 +28,13 @@ public class AlertTerm {
     @Column(nullable = false, length = 16)
     private AlertTerm.Status status = AlertTerm.Status.ACTIVE;
 
-
     @CreationTimestamp
     private LocalDateTime createdAt;
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "alertTerm", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<EmployeeAlertTerm> employeeAlertTerms = new HashSet<>();
 
 
     public enum Status { ACTIVE, INACTIVE }

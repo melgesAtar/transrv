@@ -3,7 +3,7 @@ package br.com.modware.transrv.service;
 import br.com.modware.transrv.model.*;
 import br.com.modware.transrv.quartz.EscalationJob;
 import br.com.modware.transrv.quartz.ExpireTicketJob;
-import br.com.modware.transrv.repository.EmployeeRepository;
+import br.com.modware.transrv.repository.EmployeeAlertTermRepository;
 import br.com.modware.transrv.repository.TicketRepository;
 import org.quartz.*;
 import org.springframework.stereotype.Service;
@@ -15,26 +15,29 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class TicketService {
 
     private final TicketRepository ticketRepository;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeAlertTermRepository employeeAlertTermRepository;
     private final InstanceEvolutionService instanceEvolutionService;
     private final EmployeeService employeeService;
     private final Scheduler scheduler;
     private final TicketNotificationService ticketNotificationService;
 
     public TicketService(TicketRepository ticketRepository,
-                         EmployeeRepository employeeRepository,
+                          EmployeeAlertTermRepository employeeAlertTermRepository,
                          InstanceEvolutionService instanceEvolutionService,
                          EmployeeService employeeService,
                          Scheduler scheduler,
                          TicketNotificationService ticketNotificationService) {
         this.ticketRepository = ticketRepository;
-        this.employeeRepository = employeeRepository;
+        this.employeeAlertTermRepository = employeeAlertTermRepository;
+
         this.instanceEvolutionService = instanceEvolutionService;
         this.employeeService = employeeService;
         this.scheduler = scheduler;
@@ -76,8 +79,12 @@ public class TicketService {
 
 
     private void notifyEmployees(Ticket ticket, int level) {
-        List<Employee> employees = employeeRepository
-                .findByPriorityLevelAndAlertTermsContains(level, ticket.getAlertTerm());
+
+        List<Employee> employees = employeeAlertTermRepository
+                .findByAlertTermAndPriorityLevel(ticket.getAlertTerm(), level)
+                .stream()
+                .map(EmployeeAlertTerm::getEmployee)
+                .toList();
 
         LocalDateTime now = LocalDateTime.now(ZoneId.of("America/Sao_Paulo"));
 
@@ -85,9 +92,7 @@ public class TicketService {
                 .filter(e -> employeeService.isEmployeeAvailable(e, now))
                 .toList();
 
-
         if (availables.isEmpty()) {
-
             employees.stream()
                     .min(Comparator.comparing(Employee::getEnterTime))
                     .ifPresent(next -> {
@@ -100,21 +105,36 @@ public class TicketService {
             return;
         }
 
-
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        for (Employee e : employees) {
-            instanceEvolutionService.sendMessageToEmployee(savedTicket.getWaGroup(), e, savedTicket, level);
+        Map<String, List<Employee>> employeesByPhone = availables.stream()
+                .collect(Collectors.groupingBy(e -> e.getWaContact().getPhoneNumber()));
 
-            TicketNotification notif = new TicketNotification();
-            notif.setTicket(savedTicket);
-            notif.setEmployee(e);
-            notif.setEscalationLevel(level);
-            notif.setNotifiedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+        for (Map.Entry<String, List<Employee>> entry : employeesByPhone.entrySet()) {
+            String phone = entry.getKey();
+            List<Employee> groupedEmployees = entry.getValue();
 
-            ticketNotificationService.save(notif);
+            String employeeNames = groupedEmployees.stream()
+                    .map(e -> "*" + e.getName() + "*")
+                    .collect(Collectors.joining(", "));
+
+            boolean sent = instanceEvolutionService.sendMessageToPhone(
+                    phone, employeeNames, savedTicket, level, ticket.getWaGroup()
+            );
+
+            if (sent) {
+                for (Employee e : groupedEmployees) {
+                    TicketNotification notif = new TicketNotification();
+                    notif.setTicket(savedTicket);
+                    notif.setEmployee(e);
+                    notif.setEscalationLevel(level);
+                    notif.setNotifiedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+                    ticketNotificationService.save(notif);
+                }
+            } else {
+                System.err.println("Mensagem não enviada para telefone: " + phone);
+            }
         }
-
 
         ticket.setCurrentEscalationLevel(level);
         ticketRepository.save(ticket);
@@ -177,17 +197,7 @@ public class TicketService {
         }
     }
 
-    public void resolveTicket(Long ticketId, Employee resolver, WAMessage closingMessage) throws SchedulerException {
-        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
-        ticket.setStatus(Ticket.Status.CLOSED);
-        ticket.setClosedAt(LocalDateTime.now());
-        ticketRepository.save(ticket);
 
-
-        scheduler.deleteJob(JobKey.jobKey(ticketId + "-expire"));
-        scheduler.deleteJob(JobKey.jobKey(ticketId + "-level-2"));
-        scheduler.deleteJob(JobKey.jobKey(ticketId + "-level-3"));
-    }
 
 
     private void scheduleNotifyAt(Ticket ticket, int level, LocalDateTime when) {
@@ -220,12 +230,24 @@ public class TicketService {
                     });
             closed = true;
         }
+        //ID: 123
+        //
+        //id: 123
+        //
+        //Id: 123
+        //
+        //id do chamado: 123
+        //
+        //ID DO CHAMADO: 123
+        //
+        //id 123
 
         if (messageContent != null) {
-            Pattern pattern = Pattern.compile("ID[: ](\\d+)", Pattern.CASE_INSENSITIVE);
+            Pattern pattern = Pattern.compile("(id(?:\\s*do\\s*chamado)?[: ]\\s*(\\d+))", Pattern.CASE_INSENSITIVE);
             java.util.regex.Matcher matcher = pattern.matcher(messageContent);
+
             if (matcher.find()) {
-                Long ticketId = Long.valueOf(matcher.group(1));
+                Long ticketId = Long.valueOf(matcher.group(2)); // grupo 2 é o número
                 ticketRepository.findById(ticketId).ifPresent(ticket -> {
                     if (ticket.getStatus() == Ticket.Status.OPEN) {
                         closeTicket(ticket, closingContact, closingMessage);
@@ -234,6 +256,7 @@ public class TicketService {
                 closed = true;
             }
         }
+
 
         return closed;
     }
