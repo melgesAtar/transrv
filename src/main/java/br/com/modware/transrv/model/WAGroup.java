@@ -20,6 +20,7 @@ public class WAGroup {
     @ManyToOne
     @JoinColumn(name = "agent_id", nullable = true)
     private Agent agent;
+
     private boolean isMonitored;
 
 

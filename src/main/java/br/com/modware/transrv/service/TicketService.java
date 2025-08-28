@@ -55,7 +55,6 @@ public class TicketService {
             throw new IllegalStateException("Já existe ticket aberto para essa mensagem");
         }
 
-        contactHasOpenTicketInTheGroupByTheSameReason(waContact, waGroup, alertTerm);
 
         Ticket ticket = new Ticket();
         ticket.setAlertTerm(alertTerm);
@@ -141,19 +140,7 @@ public class TicketService {
     }
 
 
-    public void contactHasOpenTicketInTheGroupByTheSameReason(WAContact waContact, WAGroup waGroup, AlertTerm alertTerm) {
-        if (waContact == null || waGroup == null || alertTerm == null) {
-            throw new IllegalArgumentException("Invalid parameters for checking open ticket");
-        }
 
-        boolean hasOpenTicket = ticketRepository.existsByContactResponsibleForOpeningTheCallAndWaGroupAndAlertTermAndStatus(
-               waContact , waGroup, alertTerm, Ticket.Status.OPEN
-        );
-
-        if (hasOpenTicket) {
-            throw new IllegalStateException("Contact already has an open ticket for this reason in the group.");
-        }
-    }
 
     private void scheduleEscalation(Ticket ticket, int nextLevel, Duration delay) throws SchedulerException {
         JobDetail job = JobBuilder.newJob(EscalationJob.class)
