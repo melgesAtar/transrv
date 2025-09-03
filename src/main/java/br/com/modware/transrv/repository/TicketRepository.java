@@ -26,8 +26,11 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     long countByStatus(Ticket.Status status);
 
-    @Query("select count(t) from Ticket t where t.status = :status and t.createdAt >= CURRENT_DATE")
-    long countOpenedToday(@org.springframework.data.repository.query.Param("status") Ticket.Status status);
+    @Query("select count(t) from Ticket t where t.status = :status and t.createdAt >= :start")
+    long countOpenedSince(
+            @org.springframework.data.repository.query.Param("status") Ticket.Status status,
+            @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start
+    );
 
     java.util.List<Ticket> findTop20ByOrderByCreatedAtDesc();
 }
