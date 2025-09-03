@@ -24,7 +24,7 @@ public class DashboardService {
         s.setClosedWithoutSolution(ticketRepository.countByStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION));
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
         java.time.LocalDateTime startOfDay = today.atStartOfDay(java.time.ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
-        s.setOpenedToday(ticketRepository.countOpenedSince(Ticket.Status.OPEN, startOfDay));
+        s.setOpenedToday(ticketRepository.countCreatedSince(startOfDay));
 
         List<Ticket> recent = ticketRepository.findTop20ByOrderByCreatedAtDesc();
         List<DashboardSummaryDTO.RecentTicketDTO> mapped = recent.stream().map(t -> {

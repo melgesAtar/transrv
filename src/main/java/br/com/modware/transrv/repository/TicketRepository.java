@@ -32,6 +32,9 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
             @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start
     );
 
+    @Query("select count(t) from Ticket t where t.createdAt >= :start")
+    long countCreatedSince(@org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start);
+
     java.util.List<Ticket> findTop20ByOrderByCreatedAtDesc();
 }
 
