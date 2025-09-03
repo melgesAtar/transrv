@@ -192,6 +192,8 @@ public class TicketService {
             ticket.setStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION);
             ticket.setClosedAt(LocalDateTime.now());
             ticketRepository.save(ticket);
+            // Atualiza dashboard em tempo real
+            dashboardController.publishUpdate();
         }
     }
 
@@ -273,6 +275,8 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
 
+            // Atualiza dashboard em tempo real
+            dashboardController.publishUpdate();
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }
