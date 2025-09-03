@@ -37,12 +37,12 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>#${t.id}</td>
-          <td>${t.waGroup?.groupName || '-'}</td>
-          <td>${t.alertTerm?.code || '-'}</td>
+          <td>${t.groupName || '-'}</td>
+          <td>${t.alertCode || '-'}</td>
           <td><span class="status ${t.status}">${t.status}</span></td>
           <td>Nível ${t.currentEscalationLevel ?? '-'}</td>
-          <td>${t.createdAt?.replace('T',' ') || '-'}</td>
-          <td>${t.closedAt?.replace('T',' ') || '-'}</td>
+          <td>${(t.createdAt || '').toString().replace('T',' ') || '-'}</td>
+          <td>${(t.closedAt || '').toString().replace('T',' ') || '-'}</td>
         `;
         tbody.appendChild(tr);
       }

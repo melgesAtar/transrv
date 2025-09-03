@@ -23,7 +23,7 @@ public class DashboardController {
     }
 
     @GetMapping("/summary")
-    public DashboardService.Summary getSummary() {
+    public br.com.modware.transrv.dto.dashboard.DashboardSummaryDTO getSummary() {
         return dashboardService.getSummary();
     }
 
@@ -42,7 +42,7 @@ public class DashboardController {
 
     // Method to publish updates
     public void publishUpdate() {
-        DashboardService.Summary data = dashboardService.getSummary();
+        br.com.modware.transrv.dto.dashboard.DashboardSummaryDTO data = dashboardService.getSummary();
         for (SseEmitter e : emitters) {
             try {
                 e.send(SseEmitter.event().name("update").data(data));
