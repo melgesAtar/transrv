@@ -184,6 +184,8 @@ public class TicketService {
         if (ticket.getStatus() != Ticket.Status.OPEN) return;
 
         notifyEmployees(ticket, level);
+        // Atualiza dashboard em tempo real após escalonamento
+        dashboardController.publishUpdate();
     }
 
     public void expire(Long ticketId) {
