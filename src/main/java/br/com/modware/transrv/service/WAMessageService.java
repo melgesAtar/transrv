@@ -77,7 +77,8 @@ public class WAMessageService {
                         newMessage.setMessageContent(contentMessage);
                         newMessage.setSentAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
 
-                        return waMessageRepository.save(newMessage);
+                        WAMessage saved = waMessageRepository.save(newMessage);
+                        return saved;
                     });
         }
     }

@@ -44,7 +44,8 @@ public class EvolutionEventService {
 
 
     public void processEvent(String payloadEvent) {
-        log.info("Processing Evolution event: {}", payloadEvent);
+        // Reduz ruído em produção (payload pode ser grande)
+        log.debug("Evolution event recebido");
 
         Gson gson = new Gson();
         EventEvolution eventEvolution = gson.fromJson(payloadEvent, EventEvolution.class);
@@ -62,7 +63,8 @@ public class EvolutionEventService {
 
     }
     private void processGroupMessage(EventEvolution eventEvolution, WAGroup WAGroup) throws SchedulerException {
-        log.info("Processing message for group: " + WAGroup.getGroupName() + "ID: " + WAGroup.getId());
+        // Mantém log conciso de contexto do grupo
+        log.info("Mensagem recebida | grupo={}({})", WAGroup.getGroupName(), WAGroup.getId());
 
         WAConversation waConversation = WAGroup.getWAConversation();
         if (waConversation == null || waConversation.getId() == null) {
@@ -76,6 +78,11 @@ public class EvolutionEventService {
                 eventEvolution.getData().getPushName()
         );
 
+        // Log com usuário e tipo de mensagem
+        String messageType = eventEvolution.getData().getMessageType();
+        log.info("Mensagem recebida do usuário={}({}) | tipo={}",
+                waContact.getName(), waContact.getPhoneNumber(), messageType);
+
         WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact);
 
         boolean closed = ticketService.tryCloseTicket(
@@ -86,7 +93,8 @@ public class EvolutionEventService {
         );
 
         if (closed) {
-            log.info("Ticket fechado pela mensagem {}", waMessage.getMessageContent());
+            log.info("Ticket fechado pela mensagem recebida no grupo={} por usuário={}({})",
+                    WAGroup.getGroupName(), waContact.getName(), waContact.getPhoneNumber());
             return;
         }
 
@@ -96,7 +104,8 @@ public class EvolutionEventService {
         Gson gson = new Gson();
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
 
-        log.info("AI Usage: " + responseOpenAi.getUsage());
+        // Uso de AI pode ser ruidoso; mover para DEBUG
+        log.debug("AI Usage: {}", responseOpenAi.getUsage());
         AIUsage aiUsage = new AIUsage(
                 responseOpenAi.getUsage().getPromptTokens(),
                 responseOpenAi.getUsage().getCompletionTokens(),
@@ -114,11 +123,21 @@ public class EvolutionEventService {
                         waMessage.setAlertTerm(alertTerm);
                         waMessageService.saveMessage(waMessage);
                         try {
-                            ticketService.openTicket(waMessage, alertTerm, waContact, WAGroup);
+                            Ticket ticket = ticketService.openTicket(waMessage, alertTerm, waContact, WAGroup);
+                            log.info("Ticket aberto | id={} | alerta={} | grupo={}",
+                                    ticket.getId(), alertTerm.getCode(), WAGroup.getGroupName());
                         } catch (SchedulerException e) {
                             throw new RuntimeException(e);
                         }
                     }, () -> log.warn("AlertTerm código '{}' não encontrado ou INACTIVE", alertCode));
+        } else {
+            // Mensagem não necessita de abertura de ticket
+            String content = waMessage.getMessageContent();
+            if (content != null && content.length() > 120) {
+                content = content.substring(0, 120) + "...";
+            }
+            log.info("Mensagem não necessita de abertura de ticket | grupo={} | usuário={}({}) | conteúdo={}",
+                    WAGroup.getGroupName(), waContact.getName(), waContact.getPhoneNumber(), content);
         }
     }
 

@@ -122,6 +122,9 @@ public class TicketService {
             );
 
             if (sent) {
+                org.slf4j.LoggerFactory.getLogger(TicketService.class).info(
+                        "Funcionários alertados | ticket={} | nível={} | telefonesDestinatários={} | nomes={}",
+                        savedTicket.getId(), level, phone, employeeNames);
                 for (Employee e : groupedEmployees) {
                     TicketNotification notif = new TicketNotification();
                     notif.setTicket(savedTicket);
@@ -131,7 +134,9 @@ public class TicketService {
                     ticketNotificationService.save(notif);
                 }
             } else {
-                System.err.println("Mensagem não enviada para telefone: " + phone);
+                org.slf4j.LoggerFactory.getLogger(TicketService.class).warn(
+                        "Falha ao alertar funcionários | ticket={} | nível={} | telefone={}",
+                        savedTicket.getId(), level, phone);
             }
         }
 

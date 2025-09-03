@@ -67,18 +67,20 @@ public class AiClassifier {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             String body = response.body();
-            System.out.println("OpenAI status=" + response.statusCode() + " body=" + body);
+            // Log menos poluído: apenas status e tamanho da resposta
+            org.slf4j.LoggerFactory.getLogger(AiClassifier.class)
+                    .debug("OpenAI status={} bodyLen={}", response.statusCode(), body != null ? body.length() : 0);
 
             Gson gson = new Gson();
 
             if (response.statusCode() / 100 != 2) {
-                throw new OpenAIException("OpenAI 400/4xx: " + body);
+                throw new OpenAIException("OpenAI 4xx/5xx: status=" + response.statusCode());
             }
 
             return gson.fromJson(body, ResponseClassifierMessage.class);
 
         } catch (Exception e) {
-            throw new OpenAIException("Failed to classify message with OpenAI + " + e.getMessage());
+            throw new OpenAIException("Falha ao classificar mensagem com OpenAI: " + e.getMessage());
         }
     }
 

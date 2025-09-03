@@ -79,11 +79,11 @@ public class InstanceEvolutionService {
         HttpResponse<String> response= httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() / 100 == 2) {
-            System.out.println("OK: " + response.body());
+            log.debug("Mensagem enviada para Evolution | status={} bodyLen={}", response.statusCode(), response.body() != null ? response.body().length() : 0);
             return true;
 
         } else {
-            log.info("Error: " + response.statusCode() + " - " + response.body());
+            log.warn("Falha ao enviar mensagem para Evolution | status={} body={} ", response.statusCode(), response.body());
             return false;
         }
     }
