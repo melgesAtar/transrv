@@ -29,12 +29,15 @@ public class TicketService {
     private final Scheduler scheduler;
     private final TicketNotificationService ticketNotificationService;
 
+    private final br.com.modware.transrv.web.DashboardController dashboardController;
+
     public TicketService(TicketRepository ticketRepository,
                           EmployeeAlertTermRepository employeeAlertTermRepository,
                          InstanceEvolutionService instanceEvolutionService,
                          EmployeeService employeeService,
                          Scheduler scheduler,
-                         TicketNotificationService ticketNotificationService) {
+                         TicketNotificationService ticketNotificationService,
+                         br.com.modware.transrv.web.DashboardController dashboardController) {
         this.ticketRepository = ticketRepository;
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
@@ -42,6 +45,7 @@ public class TicketService {
         this.employeeService = employeeService;
         this.scheduler = scheduler;
         this.ticketNotificationService = ticketNotificationService;
+        this.dashboardController = dashboardController;
     }
 
 
@@ -68,6 +72,7 @@ public class TicketService {
         ticket = ticketRepository.save(ticket);
 
         notifyEmployees(ticket, 1);
+        dashboardController.publishUpdate();
 
         scheduleEscalation(ticket, 2, Duration.ofMinutes(1));
         scheduleEscalation(ticket, 3, Duration.ofMinutes(2));
@@ -158,6 +163,7 @@ public class TicketService {
                 .build();
 
         scheduler.scheduleJob(job, trigger);
+        dashboardController.publishUpdate();
     }
 
     private void scheduleExpiration(Ticket ticket, Duration delay) throws SchedulerException {
