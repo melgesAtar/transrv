@@ -1,0 +1,19 @@
+# Maven
+target/
+.mvn/
+*.iml
+.idea/
+.classpath
+.project
+.settings/
+
+# Git
+.git/
+.gitignore
+
+# OS/editor
+.DS_Store
+*.log
+logs/
+
+

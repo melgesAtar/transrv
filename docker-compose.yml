@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    image: transrv:latest
+    container_name: transrv-app
+    environment:
+      # Render sets PORT automatically in its runtime; for local, use 8080
+      - PORT=8080
+      - LOGGING_FILE_NAME=logs/application.log
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+
+
