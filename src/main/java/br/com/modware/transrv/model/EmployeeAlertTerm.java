@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 
 @Entity
-@Table(name = "employee_alert_term")
+@Table(name = "employee_alert_term",
+       uniqueConstraints = @UniqueConstraint(name = "uk_emp_alert_priority",
+               columnNames = {"employee_id", "alert_term_id", "priorityLevel"}))
 public class EmployeeAlertTerm {
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
@@ -19,7 +21,7 @@ public class EmployeeAlertTerm {
     @JoinColumn(name = "alert_term_id", nullable = false)
     private AlertTerm alertTerm;
 
-    @Column(nullable = false)
+    @Column(name = "priorityLevel", nullable = false)
     private Integer priorityLevel;
 
 }
