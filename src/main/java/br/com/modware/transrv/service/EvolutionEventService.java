@@ -51,6 +51,8 @@ public class EvolutionEventService {
         EventEvolution eventEvolution = gson.fromJson(payloadEvent, EventEvolution.class);
 
             if(IsAMessageGroup(eventEvolution))
+                log.info("Evento de mensagem em grupo recebido | grupoId={}",
+                        eventEvolution.getData().getKey().getRemoteJid());
                 groupService.findByEvolutionGroupId(eventEvolution.getData().getKey().getRemoteJid())
                     .ifPresent(WAGroup -> {
                         try {
