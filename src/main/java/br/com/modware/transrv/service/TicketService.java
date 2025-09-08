@@ -245,11 +245,15 @@ public class TicketService {
         //id 123
 
         if (messageContent != null) {
-            Pattern pattern = Pattern.compile("(id(?:\\s*do\\s*chamado)?[: ]\\s*(\\d+))", Pattern.CASE_INSENSITIVE);
+            // Aceita variações explícitas contendo a palavra ID junto de TICKET/CHAMADO
+            // Exemplos válidos: "ID TICKET: 123", "id do ticket 123", "Id do chamado:123", "id ticket 123"
+            Pattern pattern = Pattern.compile(
+                    "(?:(?:id)\\s*(?:do)?\\s*(?:ticket|chamado)[: ]\\s*(\\d+))",
+                    Pattern.CASE_INSENSITIVE);
             java.util.regex.Matcher matcher = pattern.matcher(messageContent);
 
             if (matcher.find()) {
-                Long ticketId = Long.valueOf(matcher.group(2)); // grupo 2 é o número
+                Long ticketId = Long.valueOf(matcher.group(1));
                 ticketRepository.findById(ticketId).ifPresent(ticket -> {
                     if (ticket.getStatus() == Ticket.Status.OPEN) {
                         closeTicket(ticket, closingContact, closingMessage);
