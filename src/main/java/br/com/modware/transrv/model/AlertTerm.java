@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,7 +21,11 @@ public class AlertTerm {
     private String code;        // imutável (ex.: RISCO_ETA_ORIGEM)
 
     @Column(nullable=false, length=120)
-    private String name;        // label editável (ex.: "Risco ETA Origem")
+    private String name;     
+    
+    @Column(nullable=false, length=120)
+    @Getter
+    private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)

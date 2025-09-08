@@ -59,7 +59,7 @@ Se o chamado estiver aberto, ele será fechado e registrado quem fechou e qual m
 - Nem toda mensagem abre chamado: a IA prioriza mensagens com termos de alerta relevantes.
 - A IA pode errar na classificação ou deixar de abrir um chamado mesmo quando cabível; por isso, continue marcando manualmente a equipe.
 - Documentos muito grandes podem ser resumidos; detalhes finos podem não aparecer.
-- Expiração automática em 1 hora se ninguém fechar.
+- Expiração automática em X horas se ninguém fechar.
 
 ### Melhoria contínua
 - Estamos melhorando continuamente o modelo e as regras. Comportamentos indesejados podem ocorrer no início e serão ajustados ao longo do tempo com base no uso e feedback.

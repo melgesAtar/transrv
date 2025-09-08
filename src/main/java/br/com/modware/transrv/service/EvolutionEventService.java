@@ -64,7 +64,7 @@ public class EvolutionEventService {
     }
     private void processGroupMessage(EventEvolution eventEvolution, WAGroup WAGroup) throws SchedulerException {
         // Mantém log conciso de contexto do grupo
-        log.info("Mensagem recebida | grupo={}({})", WAGroup.getGroupName(), WAGroup.getId());
+        log.info("Mensagem recebida | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
 
         WAConversation waConversation = WAGroup.getWAConversation();
         if (waConversation == null || waConversation.getId() == null) {

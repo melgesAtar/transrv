@@ -36,11 +36,12 @@ public class AiClassifier {
             if (agentClassificationMessages.isEmpty()) {
                 throw new AgentNotFoundException("Agent 'Transportadora - Classificação de Mensagens' not found");
             }
-            String prompt = agentClassificationMessages.get().getPrompt() + "\n"+ alertTermsService.findAllActiveAlertTerms()
-                    .stream()
-                    .map(term -> term.getCode())
-                    .reduce((a, b) -> a + ", " + b)
-                    .orElse("");;
+            String prompt = agentClassificationMessages.get().getPrompt() + "\n" +
+                    alertTermsService.findAllActiveAlertTerms()
+                            .stream()
+                            .map(term -> term.getCode() + " - " + term.getDescription())
+                            .reduce((a, b) -> a + ", " + b)
+                            .orElse("");
 
             String requestBody = """
 {
