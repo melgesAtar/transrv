@@ -5,7 +5,6 @@ import br.com.modware.transrv.dto.openai.AiClassifierResponse;
 import br.com.modware.transrv.dto.openai.ResponseClassifierMessage;
 import br.com.modware.transrv.model.*;
 import com.google.gson.Gson;
-import org.apache.poi.ss.formula.functions.T;
 import org.quartz.SchedulerException;
 import org.springframework.stereotype.Service;
 
@@ -50,21 +49,45 @@ public class EvolutionEventService {
         Gson gson = new Gson();
         EventEvolution eventEvolution = gson.fromJson(payloadEvent, EventEvolution.class);
 
-            if(IsAMessageGroup(eventEvolution))
-                log.info("Evento de mensagem em grupo recebido | grupoId={}",
-                        eventEvolution.getData().getKey().getRemoteJid());
-                groupService.findByEvolutionGroupId(eventEvolution.getData().getKey().getRemoteJid())
-                    .ifPresent(WAGroup -> {
-                        try {
-                            processGroupMessage(eventEvolution, WAGroup);
-                        } catch (SchedulerException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
+            if(IsAMessageGroup(eventEvolution)) {
+                String remoteJid = eventEvolution.getData().getKey().getRemoteJid();
+                log.info("Evento de mensagem em grupo recebido | grupoId={}", remoteJid);
+
+                WAGroup waGroup = groupService.findByEvolutionGroupId(remoteJid)
+                        .orElseGet(() -> {
+                            WAGroup newGroup = new WAGroup();
+                            newGroup.setEvolutionGroupId(remoteJid);
+                            // Nome do grupo pode não estar no payload; usa remoteJid como fallback
+                            newGroup.setGroupName(eventEvolution.getData().getPushName());
+                            newGroup.setMonitored(false);
+
+                            // Cria conversa já vinculada ao novo grupo
+                            WAConversation conversation = new WAConversation();
+                            waConversationService.saveConversation(conversation);
+                            newGroup.setWAConversation(conversation);
+
+                            return groupService.save(newGroup);
+                        });
+
+                if (!waGroup.isMonitored()) {
+                    log.info("Grupo não monitorado, ignorando mensagem | grupo={}({})", waGroup.getGroupName(), waGroup.getEvolutionGroupId());
+                    return;
+                }
+
+                try {
+                    processGroupMessage(eventEvolution, waGroup);
+                } catch (SchedulerException e) {
+                    throw new RuntimeException(e);
+                }
+            }
 
 
     }
     private void processGroupMessage(EventEvolution eventEvolution, WAGroup WAGroup) throws SchedulerException {
+        if (!WAGroup.isMonitored()) {
+            log.debug("processGroupMessage chamado para grupo não monitorado | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
+            return;
+        }
         // Mantém log conciso de contexto do grupo
         log.info("Mensagem recebida | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
 

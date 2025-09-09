@@ -1,7 +1,5 @@
 package br.com.modware.transrv.service;
 
-import br.com.modware.transrv.model.AlertTerm;
-import br.com.modware.transrv.model.WAContact;
 import br.com.modware.transrv.model.WAConversation;
 import br.com.modware.transrv.model.WAGroup;
 import br.com.modware.transrv.repository.WAGroupRepository;
@@ -25,6 +23,10 @@ public class WAGroupService {
     public void updateWAConversation(WAGroup waGroup, WAConversation waConversation) {
         waGroup.setWAConversation(waConversation);
         WAGroupRepository.save(waGroup);
+    }
+
+    public WAGroup save(WAGroup waGroup) {
+        return WAGroupRepository.save(waGroup);
     }
 
 
