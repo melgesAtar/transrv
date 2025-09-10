@@ -19,11 +19,13 @@ public class DashboardService {
 
     public DashboardSummaryDTO getSummary() {
         DashboardSummaryDTO s = new DashboardSummaryDTO();
-        s.setOpen(ticketRepository.countByStatus(Ticket.Status.OPEN));
-        s.setClosed(ticketRepository.countByStatus(Ticket.Status.CLOSED));
-        s.setClosedWithoutSolution(ticketRepository.countByStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION));
-        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
-        java.time.LocalDateTime startOfDay = today.atStartOfDay(java.time.ZoneId.of("America/Sao_Paulo")).toLocalDateTime();
+        java.time.ZoneId zone = java.time.ZoneId.of("America/Sao_Paulo");
+        java.time.LocalDateTime last24h = java.time.ZonedDateTime.now(zone).minusHours(24).toLocalDateTime();
+        s.setOpen(ticketRepository.countOpenedSince(Ticket.Status.OPEN, last24h));
+        s.setClosed(ticketRepository.countClosedSince(Ticket.Status.CLOSED, last24h));
+        s.setClosedWithoutSolution(ticketRepository.countClosedSince(Ticket.Status.CLOSED_WITHOUT_SOLUTION, last24h));
+        java.time.LocalDate today = java.time.LocalDate.now(zone);
+        java.time.LocalDateTime startOfDay = today.atStartOfDay(zone).toLocalDateTime();
         s.setOpenedToday(ticketRepository.countCreatedSince(startOfDay));
 
         List<Ticket> recent = ticketRepository.findTop20ByOrderByCreatedAtDesc();
