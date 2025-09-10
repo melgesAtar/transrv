@@ -1,15 +1,15 @@
 package br.com.modware.transrv.dto.evolution;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 
 @lombok.Data
 public class EventEvolution {
     private String event;
     private String instance;
     private Data data;
-    @JsonProperty("server_url")
+    @SerializedName("server_url")
     private String serverURL;
-    @JsonProperty("date_time")
+    @SerializedName("date_time")
     private String dateTime;
     private String sender;
     private String apiKey;

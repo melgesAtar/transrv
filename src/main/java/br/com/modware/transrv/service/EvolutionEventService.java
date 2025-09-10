@@ -62,15 +62,19 @@ public class EvolutionEventService {
                             try {
                                 String serverUrl = eventEvolution.getServerURL();
                                 String instanceName = eventEvolution.getInstance();
+                                log.info("Criando WAGroup novo | remoteJid={} serverUrl={} instance={}", remoteJid, serverUrl, instanceName);
                                 if (serverUrl != null && instanceName != null) {
                                     var info = evolutionApiClient.fetchGroupInfo(serverUrl, instanceName, remoteJid);
                                     String subject = info != null ? info.getSubject() : null;
                                     newGroup.setGroupName(subject != null && !subject.isBlank() ? subject : remoteJid);
+                                    log.info("Subject resolvido para grupo {} => {}", remoteJid, newGroup.getGroupName());
                                 } else {
                                     newGroup.setGroupName(remoteJid);
+                                    log.warn("ServerURL ou instance nulos no evento; usando remoteJid como nome do grupo");
                                 }
                             } catch (Exception e) {
                                 newGroup.setGroupName(remoteJid);
+                                log.error("Falha ao resolver subject via Evolution API | remoteJid={} erro={}", remoteJid, e.getMessage());
                             }
                             newGroup.setMonitored(false);
 

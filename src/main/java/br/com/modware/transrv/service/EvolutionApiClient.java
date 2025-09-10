@@ -34,10 +34,12 @@ public class EvolutionApiClient {
                     .build();
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() / 100 != 2) {
-                throw new IllegalStateException("Evolution group info falhou: status=" + response.statusCode());
+            int status = response.statusCode();
+            String body = response.body();
+            if (status / 100 != 2) {
+                throw new IllegalStateException("Evolution group info falhou: status=" + status);
             }
-            return gson.fromJson(response.body(), GroupInfo.class);
+            return gson.fromJson(body, GroupInfo.class);
         } catch (Exception e) {
             throw new RuntimeException("Erro ao buscar informações do grupo: " + e.getMessage(), e);
         }
