@@ -4,6 +4,7 @@ import br.com.modware.transrv.dto.evolution.EventEvolution;
 import br.com.modware.transrv.model.WAContact;
 import br.com.modware.transrv.model.WAConversation;
 import br.com.modware.transrv.model.WAMessage;
+import br.com.modware.transrv.model.WAGroup;
 import br.com.modware.transrv.repository.WAMessageRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,12 +48,19 @@ public class WAMessageService {
     }
 
 
-    public WAMessage processMessage(EventEvolution eventEvolution, WAConversation waConversation, WAContact waContact) {
+    public WAMessage processMessage(EventEvolution eventEvolution, WAConversation waConversation, WAContact waContact, WAGroup waGroup) {
         String convKey = eventEvolution.getData().getKey().getRemoteJid();
         Object lock = conversationLocks.computeIfAbsent(convKey, k -> new Object());
 
         synchronized (lock) {
             return waMessageRepository.findByEvolutionMessageId(eventEvolution.getData().getKey().getId())
+                    .map(existing -> {
+                        if (existing.getWaGroup() == null && waGroup != null) {
+                            existing.setWaGroup(waGroup);
+                            return waMessageRepository.save(existing);
+                        }
+                        return existing;
+                    })
                     .orElseGet(() -> {
                         String type = eventEvolution.getData().getMessageType();
 
@@ -76,6 +84,7 @@ public class WAMessageService {
                         newMessage.setSender(waContact);
                         newMessage.setMessageContent(contentMessage);
                         newMessage.setSentAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+                        newMessage.setWaGroup(waGroup);
 
                         WAMessage saved = waMessageRepository.save(newMessage);
                         return saved;

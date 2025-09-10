@@ -25,11 +25,12 @@ public class EvolutionEventService {
     private final WAMessageService waMessageService;
     private final AlertTermsService alertTermsService;
     private final TicketService ticketService;
+    private final EvolutionApiClient evolutionApiClient;
 
     org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EvolutionEventService.class);
 
 
-    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, AIUsageService aiUsageService, WAMessageService waMessageService, AlertTermsService alertTermsService, TicketService ticketService) {
+    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, AIUsageService aiUsageService, WAMessageService waMessageService, AlertTermsService alertTermsService, TicketService ticketService, EvolutionApiClient evolutionApiClient) {
         this.groupService = groupService;
         this.messageService = messageService;
         this.waContactService = waContactService;
@@ -39,11 +40,11 @@ public class EvolutionEventService {
         this.waMessageService = waMessageService;
         this.alertTermsService = alertTermsService;
         this.ticketService = ticketService;
+        this.evolutionApiClient = evolutionApiClient;
     }
 
 
     public void processEvent(String payloadEvent) {
-        // Reduz ruído em produção (payload pode ser grande)
         log.debug("Evolution event recebido");
 
         Gson gson = new Gson();
@@ -57,11 +58,22 @@ public class EvolutionEventService {
                         .orElseGet(() -> {
                             WAGroup newGroup = new WAGroup();
                             newGroup.setEvolutionGroupId(remoteJid);
-                            // Nome do grupo pode não estar no payload; usa remoteJid como fallback
-                            newGroup.setGroupName(eventEvolution.getData().getPushName());
+                            // Busca o nome real do grupo (subject) na Evolution API usando serverURL/instance do evento
+                            try {
+                                String serverUrl = eventEvolution.getServerURL();
+                                String instanceName = eventEvolution.getInstance();
+                                if (serverUrl != null && instanceName != null) {
+                                    var info = evolutionApiClient.fetchGroupInfo(serverUrl, instanceName, remoteJid);
+                                    String subject = info != null ? info.getSubject() : null;
+                                    newGroup.setGroupName(subject != null && !subject.isBlank() ? subject : remoteJid);
+                                } else {
+                                    newGroup.setGroupName(remoteJid);
+                                }
+                            } catch (Exception e) {
+                                newGroup.setGroupName(remoteJid);
+                            }
                             newGroup.setMonitored(false);
 
-                            // Cria conversa já vinculada ao novo grupo
                             WAConversation conversation = new WAConversation();
                             waConversationService.saveConversation(conversation);
                             newGroup.setWAConversation(conversation);
@@ -108,7 +120,7 @@ public class EvolutionEventService {
         log.info("Mensagem recebida do usuário={}({}) | tipo={}",
                 waContact.getName(), waContact.getPhoneNumber(), messageType);
 
-        WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact);
+        WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact, WAGroup);
 
         boolean closed = ticketService.tryCloseTicket(
                 eventEvolution.getData().getContextInfo() != null ? eventEvolution.getData().getContextInfo().getStanzaId() : null,

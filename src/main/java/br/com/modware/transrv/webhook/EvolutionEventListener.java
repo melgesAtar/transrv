@@ -23,6 +23,7 @@ public class EvolutionEventListener {
 
     @PostMapping("/messages-upsert")
     public ResponseEntity<Void> receiveMessageUpsertEvent(@RequestBody String payload) {
+        log.info("Evolution payload recebido");
         try {
             evolutionEventService.processEvent(payload);
         } catch (Exception e) {
