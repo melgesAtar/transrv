@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,6 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final EmployeeAlertTermRepository employeeAlertTermRepository;
     private final InstanceEvolutionService instanceEvolutionService;
-    private final EmployeeService employeeService;
     private final Scheduler scheduler;
     private final TicketNotificationService ticketNotificationService;
 
@@ -34,7 +32,6 @@ public class TicketService {
     public TicketService(TicketRepository ticketRepository,
                           EmployeeAlertTermRepository employeeAlertTermRepository,
                          InstanceEvolutionService instanceEvolutionService,
-                         EmployeeService employeeService,
                          Scheduler scheduler,
                          TicketNotificationService ticketNotificationService,
                          br.com.modware.transrv.web.DashboardController dashboardController) {
@@ -42,7 +39,6 @@ public class TicketService {
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
         this.instanceEvolutionService = instanceEvolutionService;
-        this.employeeService = employeeService;
         this.scheduler = scheduler;
         this.ticketNotificationService = ticketNotificationService;
         this.dashboardController = dashboardController;
@@ -90,28 +86,9 @@ public class TicketService {
                 .map(EmployeeAlertTerm::getEmployee)
                 .toList();
 
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("America/Sao_Paulo"));
-
-        List<Employee> availables = employees.stream()
-                .filter(e -> employeeService.isEmployeeAvailable(e, now))
-                .toList();
-
-        if (availables.isEmpty()) {
-            employees.stream()
-                    .min(Comparator.comparing(Employee::getEnterTime))
-                    .ifPresent(next -> {
-                        LocalDateTime nextTime = now.with(next.getEnterTime());
-                        if (nextTime.isBefore(now)) {
-                            nextTime = nextTime.plusDays(1);
-                        }
-                        scheduleNotifyAt(ticket, level, nextTime);
-                    });
-            return;
-        }
-
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        Map<String, List<Employee>> employeesByPhone = availables.stream()
+        Map<String, List<Employee>> employeesByPhone = employees.stream()
                 .collect(Collectors.groupingBy(e -> e.getWaContact().getPhoneNumber()));
 
         for (Map.Entry<String, List<Employee>> entry : employeesByPhone.entrySet()) {
@@ -202,23 +179,7 @@ public class TicketService {
 
 
 
-    private void scheduleNotifyAt(Ticket ticket, int level, LocalDateTime when) {
-        try {
-            JobDetail job = JobBuilder.newJob(EscalationJob.class)
-                    .withIdentity("ticket_" + ticket.getId() + "_level_" + level, "tickets")
-                    .usingJobData("ticketId", ticket.getId())
-                    .usingJobData("level", level)
-                    .build();
-
-            Trigger trigger = TriggerBuilder.newTrigger()
-                    .startAt(Date.from(when.atZone(ZoneId.systemDefault()).toInstant()))
-                    .build();
-
-            scheduler.scheduleJob(job, trigger);
-        } catch (SchedulerException e) {
-            throw new RuntimeException("Erro ao agendar notificação para horário de expediente", e);
-        }
-    }
+    // método de agendamento por horário removido conforme nova regra de notificação imediata
 
     public boolean tryCloseTicket(String stanzaId, String messageContent, WAContact closingContact, WAMessage closingMessage) {
         boolean closed = false;

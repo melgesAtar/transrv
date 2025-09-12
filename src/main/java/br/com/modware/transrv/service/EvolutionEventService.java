@@ -104,7 +104,6 @@ public class EvolutionEventService {
             log.debug("processGroupMessage chamado para grupo não monitorado | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
             return;
         }
-        // Mantém log conciso de contexto do grupo
         log.info("Mensagem recebida | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
 
         WAConversation waConversation = WAGroup.getWAConversation();
@@ -119,7 +118,6 @@ public class EvolutionEventService {
                 eventEvolution.getData().getPushName()
         );
 
-        // Log com usuário e tipo de mensagem
         String messageType = eventEvolution.getData().getMessageType();
         log.info("Mensagem recebida do usuário={}({}) | tipo={}",
                 waContact.getName(), waContact.getPhoneNumber(), messageType);
