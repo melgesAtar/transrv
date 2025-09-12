@@ -223,37 +223,16 @@ public class TicketService {
     public boolean tryCloseTicket(String stanzaId, String messageContent, WAContact closingContact, WAMessage closingMessage) {
         boolean closed = false;
 
-        if (stanzaId != null && !stanzaId.isBlank()) {
-            ticketRepository.findByMessageResponsibleForOpeningTheCall_EvolutionMessageId(stanzaId)
-                    .ifPresent(ticket -> {
-                        if (ticket.getStatus() == Ticket.Status.OPEN) {
-                            closeTicket(ticket, closingContact, closingMessage);
-                        }
-                    });
-            closed = true;
-        }
-        //ID: 123
-        //
-        //id: 123
-        //
-        //Id: 123
-        //
-        //id do chamado: 123
-        //
-        //ID DO CHAMADO: 123
-        //
-        //id 123
-
+        // Novo critério de fechamento: procurar frases do tipo
+        // "ticket finalizado id 123" (variações de caixa e pontuação)
+        // Não depende de ser resposta a uma mensagem específica.
         if (messageContent != null) {
-            // Aceita variações explícitas contendo a palavra ID junto de TICKET/CHAMADO
-            // Exemplos válidos: "ID TICKET: 123", "id do ticket 123", "Id do chamado:123", "id ticket 123"
-            Pattern pattern = Pattern.compile(
-                    "(?:(?:id)\\s*(?:do)?\\s*(?:ticket|chamado)[: ]\\s*(\\d+))",
-                    Pattern.CASE_INSENSITIVE);
-            java.util.regex.Matcher matcher = pattern.matcher(messageContent);
+            Pattern phrasePattern = Pattern.compile(
+                    "(?i)(?:ticket|chamado)\\s*finalizad[oa][\\s,:-]*.*?\\bid\\b\\s*[:\\-]?\\s*(\\d+)");
+            java.util.regex.Matcher phraseMatcher = phrasePattern.matcher(messageContent);
 
-            if (matcher.find()) {
-                Long ticketId = Long.valueOf(matcher.group(1));
+            if (phraseMatcher.find()) {
+                Long ticketId = Long.valueOf(phraseMatcher.group(1));
                 ticketRepository.findById(ticketId).ifPresent(ticket -> {
                     if (ticket.getStatus() == Ticket.Status.OPEN) {
                         closeTicket(ticket, closingContact, closingMessage);
