@@ -143,7 +143,6 @@ public class EvolutionEventService {
         Gson gson = new Gson();
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
 
-        // Uso de AI pode ser ruidoso; mover para DEBUG
         log.debug("AI Usage: {}", responseOpenAi.getUsage());
         AIUsage aiUsage = new AIUsage(
                 responseOpenAi.getUsage().getPromptTokens(),

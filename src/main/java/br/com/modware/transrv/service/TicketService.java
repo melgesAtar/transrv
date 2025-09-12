@@ -161,8 +161,12 @@ public class TicketService {
         if (ticket.getStatus() != Ticket.Status.OPEN) return;
 
         notifyEmployees(ticket, level);
-        // Atualiza dashboard em tempo real após escalonamento
         dashboardController.publishUpdate();
+
+        // Se chegou ao nível 3, iniciar alerta em loop no grupo
+        if (level == 3) {
+            scheduleGroupLoopAlert(ticket);
+        }
     }
 
     public void expire(Long ticketId) {
@@ -220,11 +224,42 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
+            scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
 
             // Atualiza dashboard em tempo real
             dashboardController.publishUpdate();
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }
+    }
+
+    private void scheduleGroupLoopAlert(Ticket ticket) {
+        try {
+            JobDetail job = JobBuilder.newJob(br.com.modware.transrv.quartz.GroupAlertLoopJob.class)
+                    .withIdentity(ticket.getId() + "-group-loop")
+                    .usingJobData("ticketId", ticket.getId())
+                    .build();
+
+            // Disparo inicial após 10 minutos (carência para o nível 3 responder), depois a cada 3 minutos
+            Trigger trigger = TriggerBuilder.newTrigger()
+                    .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
+                            .withIntervalInMinutes(3)
+                            .repeatForever())
+                    .startAt(Date.from(Instant.now().plus(Duration.ofMinutes(1))))
+                    .build();
+
+            scheduler.scheduleJob(job, trigger);
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Erro ao agendar alerta em loop para o ticket " + ticket.getId(), e);
+        }
+    }
+
+    public void sendGroupAlertIfOpenLevel3(Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElse(null);
+        if (ticket == null) return;
+        if (ticket.getStatus() != Ticket.Status.OPEN) return;
+        if (ticket.getCurrentEscalationLevel() < 3) return;
+
+        instanceEvolutionService.sendMessageToGroup(ticket.getWaGroup(), ticket, 3);
     }
 }

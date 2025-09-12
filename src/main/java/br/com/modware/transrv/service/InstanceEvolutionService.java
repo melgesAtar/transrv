@@ -35,7 +35,11 @@ public class InstanceEvolutionService {
             default -> colorEmoji = "🟡"; // amarelo (nível 1)
         }
 
-        String frame = colorEmoji.repeat(12);
+        String frame = colorEmoji.repeat(10);
+
+        long minutesOpen = java.time.Duration
+                .between(ticket.getCreatedAt(), java.time.LocalDateTime.now(java.time.ZoneId.of("America/Sao_Paulo")))
+                .toMinutes();
 
         String body = String.format(
                 "*Novo Ticket Aberto*\n\n" +
@@ -45,13 +49,15 @@ public class InstanceEvolutionService {
                         "➡️ Responsáveis notificados: %s\n\n" +
                         "Para encerrar este chamado, responda a mensagem no grupo ou envie uma mensagem com o *ID* abaixo:\n\n" +
                         "*ID do Chamado:* %d\n" +
-                        "*Nível de Prioridade:* %d",
+                        "*Nível de Prioridade:* %d\n" +
+                        "*Tempo em aberto:* %d min",
                 waGroup.getGroupName(),
                 ticket.getAlertTerm().getCode(),
                 ticket.getMessageResponsibleForOpeningTheCall().getMessageContent(),
                 employeeNames,
                 ticket.getId(),
-                level
+                level,
+                minutesOpen
         );
 
         String messageContent = frame + "\n" + body + "\n" + frame;
@@ -68,6 +74,50 @@ public class InstanceEvolutionService {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public boolean sendMessageToGroup(WAGroup waGroup, Ticket ticket, int level) {
+        String colorEmoji;
+        switch (level) {
+            case 2 -> colorEmoji = "🟠";
+            case 3 -> colorEmoji = "🔴";
+            default -> colorEmoji = "🟡";
+        }
+
+        String frame = colorEmoji.repeat(10);
+
+        long minutesOpen = java.time.Duration
+                .between(ticket.getCreatedAt(), java.time.LocalDateTime.now(java.time.ZoneId.of("America/Sao_Paulo")))
+                .toMinutes();
+
+        String body = String.format(
+                "*Alerta de Ticket em Aberto*\n\n" +
+                        "*Grupo:* %s\n" +
+                        "*Alerta:* %s\n" +
+                        "*ID do Chamado:* %d\n" +
+                        "*Nível de Prioridade:* %d\n" +
+                        "*Tempo em aberto:* %d min\n\n" +
+                        "Para encerrar, envie: 'ticket finalizado id %d'",
+                waGroup.getGroupName(),
+                ticket.getAlertTerm().getCode(),
+                ticket.getId(),
+                level,
+                minutesOpen,
+                ticket.getId()
+        );
+
+        String messageContent = frame + "\n" + body + "\n" + frame;
+
+        SendPlainText sendPlainText = new SendPlainText();
+        sendPlainText.setNumber(waGroup.getEvolutionGroupId());
+        sendPlainText.setText(messageContent);
+        sendPlainText.setLinkPreview(true);
+        try {
+            return sendMessage(sendPlainText);
+        } catch (InterruptedException | IOException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     private boolean sendMessage(SendPlainText sendPlainText) throws IOException, InterruptedException {
