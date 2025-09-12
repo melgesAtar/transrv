@@ -260,6 +260,12 @@ public class TicketService {
         if (ticket.getStatus() != Ticket.Status.OPEN) return;
         if (ticket.getCurrentEscalationLevel() < 3) return;
 
-        instanceEvolutionService.sendMessageToGroup(ticket.getWaGroup(), ticket, 3);
+        boolean sent = instanceEvolutionService.sendMessageToGroup(ticket.getWaGroup(), ticket, 3);
+        org.slf4j.LoggerFactory.getLogger(TicketService.class).info(
+                "Alerta em loop enviado ao grupo | ticket={} | grupoId={} | sucesso={}",
+                ticket.getId(),
+                ticket.getWaGroup() != null ? ticket.getWaGroup().getEvolutionGroupId() : null,
+                sent
+        );
     }
 }
