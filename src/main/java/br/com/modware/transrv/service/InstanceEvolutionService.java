@@ -28,8 +28,17 @@ public class InstanceEvolutionService {
 
 
     public boolean sendMessageToPhone(String phoneNumber, String employeeNames, Ticket ticket, int level, WAGroup waGroup) {
-        String messageContent = String.format(
-                "*🚨 Novo Ticket Aberto*\n\n" +
+        String colorEmoji;
+        switch (level) {
+            case 2 -> colorEmoji = "🟠"; // laranja
+            case 3 -> colorEmoji = "🔴"; // vermelho
+            default -> colorEmoji = "🟡"; // amarelo (nível 1)
+        }
+
+        String frame = colorEmoji.repeat(12);
+
+        String body = String.format(
+                "*Novo Ticket Aberto*\n\n" +
                         "*Grupo:* %s\n" +
                         "*Alerta:* %s\n" +
                         "*Mensagem:* %s\n\n" +
@@ -44,6 +53,8 @@ public class InstanceEvolutionService {
                 ticket.getId(),
                 level
         );
+
+        String messageContent = frame + "\n" + body + "\n" + frame;
 
         SendPlainText sendPlainText = new SendPlainText();
         sendPlainText.setNumber(phoneNumber);
