@@ -18,12 +18,62 @@
     .CLOSED { color: #059669; }
     .CLOSED_WITHOUT_SOLUTION { color: #b45309; }
     .pill { padding: 2px 8px; border-radius: 9999px; background: #f3f4f6; font-size: 12px; }
+    .sla { width: 120px; height: 8px; background: #eee; border-radius: 9999px; overflow: hidden; }
+    .sla .fill { height: 100%; width: 0%; background: #facc15; transition: width .3s linear, background-color .3s linear; }
+    .sla .fill.yellow { background: #facc15; }
+    .sla .fill.orange { background: #fb923c; }
+    .sla .fill.red { background: #ef4444; }
   </style>
   <script>
     async function fetchSummary() {
       const res = await fetch('/dashboard/summary');
       return res.json();
     }
+
+    function formatDuration(totalSeconds) {
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const hh = hours.toString().padStart(2, '0');
+      const mm = minutes.toString().padStart(2, '0');
+      const ss = seconds.toString().padStart(2, '0');
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function updateTimers() {
+      const now = Date.now();
+      const rows = document.querySelectorAll('#recent tr');
+      rows.forEach(tr => {
+        const created = tr.getAttribute('data-created-at');
+        if (!created) return;
+        const status = tr.getAttribute('data-status');
+        const closed = tr.getAttribute('data-closed-at');
+        const startMs = new Date((created || '').toString().replace(' ', 'T')).getTime();
+        const endMs = (status === 'OPEN' || !closed) ? now : new Date((closed || '').toString().replace(' ', 'T')).getTime();
+        if (isNaN(startMs)) return;
+        const elapsedSec = Math.max(0, Math.floor((endMs - startMs) / 1000));
+
+        const timerEl = tr.querySelector('.timer');
+        if (timerEl) timerEl.textContent = formatDuration(elapsedSec);
+
+        const fill = tr.querySelector('.sla .fill');
+        if (fill) {
+          const cap = 120; // 2 minutos até o nível 3
+          const percent = Math.max(0, Math.min(100, (elapsedSec / cap) * 100));
+          fill.style.width = percent + '%';
+          fill.classList.remove('yellow','orange','red');
+          if (elapsedSec < 60) {
+            fill.classList.add('yellow');
+          } else if (elapsedSec < 120) {
+            fill.classList.add('orange');
+          } else {
+            fill.classList.add('red');
+          }
+        }
+      });
+    }
+
+    let timersIntervalId;
 
     function renderSummary(s) {
       document.getElementById('open').textContent = s.open;
@@ -35,6 +85,9 @@
       tbody.innerHTML = '';
       for (const t of s.recent || []) {
         const tr = document.createElement('tr');
+        tr.setAttribute('data-status', t.status || '');
+        tr.setAttribute('data-created-at', (t.createdAt || ''));
+        tr.setAttribute('data-closed-at', (t.closedAt || ''));
         tr.innerHTML = `
           <td>#${t.id}</td>
           <td>${t.groupName || '-'}</td>
@@ -43,8 +96,17 @@
           <td>Nível ${t.currentEscalationLevel ?? '-'}</td>
           <td>${(t.createdAt || '').toString().replace('T',' ') || '-'}</td>
           <td>${(t.closedAt || '').toString().replace('T',' ') || '-'}</td>
+          <td><span class="timer">-</span></td>
+          <td>
+            <div class="sla"><div class="fill"></div></div>
+          </td>
         `;
         tbody.appendChild(tr);
+      }
+
+      updateTimers();
+      if (!timersIntervalId) {
+        timersIntervalId = setInterval(updateTimers, 1000);
       }
     }
 
@@ -85,6 +147,8 @@
           <th>Escalação</th>
           <th>Criado em</th>
           <th>Fechado em</th>
+          <th>Tempo em aberto</th>
+          <th>SLA</th>
         </tr>
       </thead>
       <tbody id="recent"></tbody>

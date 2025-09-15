@@ -1,6 +1,5 @@
 package br.com.modware.transrv.service;
 
-import br.com.modware.transrv.dto.openai.AiClassifierResponse;
 import br.com.modware.transrv.dto.openai.ResponseClassifierMessage;
 import br.com.modware.transrv.exception.AgentNotFoundException;
 import br.com.modware.transrv.exception.OpenAIException;
@@ -14,7 +13,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 @Service
 public class AiClassifier {
@@ -22,21 +20,23 @@ public class AiClassifier {
     @Value("${openai.api.key}")
     private String openAiApiKey;
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
-    private final AgentService agentService;
     private final AlertTermsService alertTermsService;
 
-    public AiClassifier(AgentService agentService, AlertTermsService alertTermsService) {
-        this.agentService = agentService;
+    public AiClassifier(AlertTermsService alertTermsService) {
         this.alertTermsService = alertTermsService;
     }
 
-    public ResponseClassifierMessage ticketClassification(String messageContent) {
+    public ResponseClassifierMessage ticketClassification(String messageContent, Agent agent) {
         try {
-            Optional<Agent> agentClassificationMessages  = agentService.findByName("Transportadora - Classificação de Mensagens");
-            if (agentClassificationMessages.isEmpty()) {
-                throw new AgentNotFoundException("Agent 'Transportadora - Classificação de Mensagens' not found");
+            if (messageContent == null || messageContent.isBlank()) {
+                throw new OpenAIException("Conteúdo da mensagem vazio para classificação");
             }
-            String prompt = agentClassificationMessages.get().getPrompt() + "\n" +
+
+            if (agent == null || agent.getPrompt() == null || agent.getPrompt().isBlank()) {
+                throw new AgentNotFoundException("Agente do grupo não configurado ou sem prompt");
+            }
+
+            String prompt = agent.getPrompt() + "\n" +
                     alertTermsService.findAllActiveAlertTerms()
                             .stream()
                             .map(term -> term.getCode() + " - " + term.getDescription())

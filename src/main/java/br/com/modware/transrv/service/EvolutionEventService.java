@@ -138,7 +138,13 @@ public class EvolutionEventService {
         }
 
 
-        ResponseClassifierMessage responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent());
+        // Classificação usando o agente vinculado ao grupo
+        if (waMessage.getMessageContent() == null || waMessage.getMessageContent().isBlank()) {
+            log.warn("Mensagem vazia, pulando classificação para evitar erro na OpenAI");
+            return;
+        }
+        Agent groupAgent = WAGroup.getAgent();
+        ResponseClassifierMessage responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent(), groupAgent);
         String contentJson = responseOpenAi.getChoices().get(0).getMessage().getContent();
         Gson gson = new Gson();
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
