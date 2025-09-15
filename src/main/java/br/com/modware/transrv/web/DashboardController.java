@@ -1,25 +1,28 @@
 package br.com.modware.transrv.web;
 
 import br.com.modware.transrv.service.DashboardService;
+import br.com.modware.transrv.service.TicketService;
+import br.com.modware.transrv.service.DashboardBroadcaster;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 @RestController
 @RequestMapping("/dashboard")
 public class DashboardController {
 
     private final DashboardService dashboardService;
-    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final TicketService ticketService;
+    private final DashboardBroadcaster broadcaster;
 
-    public DashboardController(DashboardService dashboardService) {
+    public DashboardController(DashboardService dashboardService, TicketService ticketService, DashboardBroadcaster broadcaster) {
         this.dashboardService = dashboardService;
+        this.ticketService = ticketService;
+        this.broadcaster = broadcaster;
     }
 
     @GetMapping("/summary")
@@ -29,28 +32,15 @@ public class DashboardController {
 
     // SSE stream for real-time updates
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream() {
-        SseEmitter emitter = new SseEmitter(0L);
-        emitters.add(emitter);
-        emitter.onCompletion(() -> emitters.remove(emitter));
-        emitter.onTimeout(() -> emitters.remove(emitter));
-        try {
-            emitter.send(SseEmitter.event().name("update").data(dashboardService.getSummary()));
-        } catch (IOException ignored) {}
-        return emitter;
-    }
+    public SseEmitter stream() { return broadcaster.stream(); }
 
     // Method to publish updates
-    public void publishUpdate() {
-        br.com.modware.transrv.dto.dashboard.DashboardSummaryDTO data = dashboardService.getSummary();
-        for (SseEmitter e : emitters) {
-            try {
-                e.send(SseEmitter.event().name("update").data(data));
-            } catch (IOException ex) {
-                e.complete();
-                emitters.remove(e);
-            }
-        }
+    public void publishUpdate() { broadcaster.publishUpdate(); }
+
+    @PostMapping("/tickets/{id}/close")
+    public org.springframework.http.ResponseEntity<Void> closeTicket(@PathVariable Long id) {
+        ticketService.closeByDashboard(id);
+        return org.springframework.http.ResponseEntity.noContent().build();
     }
 }
 

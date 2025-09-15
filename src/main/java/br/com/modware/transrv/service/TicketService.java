@@ -27,21 +27,21 @@ public class TicketService {
     private final Scheduler scheduler;
     private final TicketNotificationService ticketNotificationService;
 
-    private final br.com.modware.transrv.web.DashboardController dashboardController;
+    private final DashboardBroadcaster dashboardBroadcaster;
 
     public TicketService(TicketRepository ticketRepository,
                           EmployeeAlertTermRepository employeeAlertTermRepository,
                          InstanceEvolutionService instanceEvolutionService,
                          Scheduler scheduler,
                          TicketNotificationService ticketNotificationService,
-                         br.com.modware.transrv.web.DashboardController dashboardController) {
+                         DashboardBroadcaster dashboardBroadcaster) {
         this.ticketRepository = ticketRepository;
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
         this.instanceEvolutionService = instanceEvolutionService;
         this.scheduler = scheduler;
         this.ticketNotificationService = ticketNotificationService;
-        this.dashboardController = dashboardController;
+        this.dashboardBroadcaster = dashboardBroadcaster;
     }
 
 
@@ -71,7 +71,7 @@ public class TicketService {
         ticket = ticketRepository.save(ticket);
 
         notifyEmployees(ticket, 1);
-        dashboardController.publishUpdate();
+        dashboardBroadcaster.publishUpdate();
 
         scheduleEscalation(ticket, 2, Duration.ofMinutes(1));
         scheduleEscalation(ticket, 3, Duration.ofMinutes(2));
@@ -143,7 +143,7 @@ public class TicketService {
                 .build();
 
         scheduler.scheduleJob(job, trigger);
-        dashboardController.publishUpdate();
+        dashboardBroadcaster.publishUpdate();
     }
 
     private void scheduleExpiration(Ticket ticket, Duration delay) throws SchedulerException {
@@ -164,7 +164,7 @@ public class TicketService {
         if (ticket.getStatus() != Ticket.Status.OPEN) return;
 
         notifyEmployees(ticket, level);
-        dashboardController.publishUpdate();
+        dashboardBroadcaster.publishUpdate();
 
         // Se chegou ao nível 3, iniciar alerta em loop no grupo
         if (level == 3) {
@@ -179,8 +179,19 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now());
             ticketRepository.save(ticket);
             // Atualiza dashboard em tempo real
-            dashboardController.publishUpdate();
+            dashboardBroadcaster.publishUpdate();
         }
+    }
+
+    public Ticket closeByDashboard(Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
+        if (ticket.getStatus() == Ticket.Status.OPEN) {
+            ticket.setStatus(Ticket.Status.CLOSED);
+            ticket.setClosedAt(LocalDateTime.now());
+            ticket = ticketRepository.save(ticket);
+            dashboardBroadcaster.publishUpdate();
+        }
+        return ticket;
     }
 
 
@@ -230,7 +241,7 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
 
             // Atualiza dashboard em tempo real
-            dashboardController.publishUpdate();
+            dashboardBroadcaster.publishUpdate();
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }

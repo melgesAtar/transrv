@@ -6,7 +6,7 @@
   <title>Dashboard - Chamados</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
-    .cards { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
     .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
     .muted { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
     .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
@@ -23,6 +23,19 @@
     .sla .fill.yellow { background: #facc15; }
     .sla .fill.orange { background: #fb923c; }
     .sla .fill.red { background: #ef4444; }
+    .icon-btn { background: transparent; border: none; cursor: pointer; font-size: 16px; }
+    .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+    .modal.open { display: flex; }
+    .modal-card { width: min(600px, 92vw); background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .modal-title { font-weight: 700; font-size: 16px; }
+    .close-x { background: transparent; border: none; font-size: 20px; cursor: pointer; }
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { min-width: 960px; }
+    @media (max-width: 640px) {
+      th, td { padding: 8px 6px; }
+      .value { font-size: 22px; }
+    }
   </style>
   <script>
     async function fetchSummary() {
@@ -94,7 +107,7 @@
       document.getElementById('open').textContent = s.open;
       document.getElementById('closed').textContent = s.closed;
       document.getElementById('cws').textContent = s.closedWithoutSolution;
-      document.getElementById('today').textContent = s.openedToday;
+      // removido campo "abertos hoje" do dashboard
 
       const tbody = document.getElementById('recent');
       tbody.innerHTML = '';
@@ -115,10 +128,22 @@
           <td>${(t.closedAt || '').toString().replace('T',' ') || '-'}</td>
           <td><span class="timer">-</span></td>
           <td>
+            <button class="icon-btn msg-btn" title="Ver mensagem de abertura" aria-label="Mensagem de abertura">📨</button>
+          </td>
+          <td>
+            ${t.status === 'OPEN' ? `<button class="pill close-ticket-btn" data-id="${t.id}">Fechar</button>` : '-'}
+          </td>
+          <td>
             <div class="sla"><div class="fill"></div></div>
           </td>
         `;
         tbody.appendChild(tr);
+        // Guardar conteúdo da mensagem no botão para abrir modal
+        const msgBtn = tr.querySelector('.msg-btn');
+        if (msgBtn) {
+          msgBtn.dataset.message = t.openingMessageContent || '';
+          msgBtn.dataset.ticketId = t.id;
+        }
       }
 
       updateTimers();
@@ -137,9 +162,45 @@
       es.onerror = () => { es.close(); setTimeout(startStream, 3000); };
     }
 
+    function attachTableHandlers() {
+      document.addEventListener('click', async (ev) => {
+        const target = ev.target;
+        if (target && target.classList && target.classList.contains('msg-btn')) {
+          const content = target.dataset.message || '';
+          const ticketId = target.dataset.ticketId || '';
+          openModal(`Mensagem responsável pela abertura (#${ticketId})`, content || '(sem conteúdo)');
+        }
+        if (target && target.classList && target.classList.contains('close-ticket-btn')) {
+          const id = target.getAttribute('data-id');
+          if (!id) return;
+          if (!confirm('Confirmar fechamento do chamado #' + id + '?')) return;
+          try {
+            const res = await fetch(`/dashboard/tickets/${id}/close`, { method: 'POST' });
+            if (!res.ok && res.status !== 204) {
+              alert('Falha ao fechar chamado #' + id);
+            }
+          } catch (e) {
+            alert('Erro ao fechar chamado: ' + e.message);
+          }
+        }
+      });
+    }
+
+    function openModal(title, content) {
+      const modal = document.getElementById('msgModal');
+      modal.classList.add('open');
+      modal.querySelector('.modal-title').textContent = title;
+      modal.querySelector('.modal-body').textContent = content;
+    }
+    function closeModal() {
+      const modal = document.getElementById('msgModal');
+      modal.classList.remove('open');
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       renderSummary(await fetchSummary());
       startStream();
+      attachTableHandlers();
     });
   </script>
 </head>
@@ -149,11 +210,11 @@
     <div class="card"><div class="muted">Abertos (últimas 24h)</div><div class="value" id="open">-</div></div>
     <div class="card"><div class="muted">Fechados (últimas 24h)</div><div class="value" id="closed">-</div></div>
     <div class="card"><div class="muted">Fechados s/ solução (últimas 24h)</div><div class="value" id="cws">-</div></div>
-    <div class="card"><div class="muted">Abertos hoje</div><div class="value" id="today">-</div></div>
   </div>
 
   <div class="card">
     <div class="muted">Últimos 20</div>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -165,11 +226,27 @@
           <th>Criado em</th>
           <th>Fechado em</th>
           <th>Tempo em aberto</th>
+          <th>Msg abertura</th>
+          <th>Ações</th>
           <th>SLA</th>
         </tr>
       </thead>
       <tbody id="recent"></tbody>
     </table>
+    </div>
+  </div>
+
+  <div id="msgModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div id="modalTitle" class="modal-title">Mensagem responsável pela abertura</div>
+        <button class="close-x" onclick="closeModal()" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body" style="white-space: pre-wrap; word-break: break-word;"></div>
+      <div style="text-align: right; margin-top: 12px;">
+        <button class="pill" onclick="closeModal()">Fechar</button>
+      </div>
+    </div>
   </div>
 </body>
 </html>

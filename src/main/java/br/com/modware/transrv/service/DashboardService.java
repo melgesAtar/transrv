@@ -38,6 +38,9 @@ public class DashboardService {
             dto.setCurrentEscalationLevel(t.getCurrentEscalationLevel());
             dto.setCreatedAt(t.getCreatedAt());
             dto.setClosedAt(t.getClosedAt());
+            if (t.getMessageResponsibleForOpeningTheCall() != null) {
+                dto.setOpeningMessageContent(t.getMessageResponsibleForOpeningTheCall().getMessageContent());
+            }
             return dto;
         }).collect(Collectors.toList());
         s.setRecent(mapped);

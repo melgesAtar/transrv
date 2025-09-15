@@ -149,6 +149,8 @@ public class EvolutionEventService {
         ResponseClassifierMessage responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent(), groupAgent);
         String contentJson = responseOpenAi.getChoices().get(0).getMessage().getContent();
         Gson gson = new Gson();
+        // Logar somente a resposta do ChatGPT (conteúdo bruto)
+        log.info("ChatGPT content: {}", contentJson);
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
 
         // Vincular funcionário se veio do classificador
@@ -156,27 +158,45 @@ public class EvolutionEventService {
         String employeeName = classifierResponse.getEmployee();
         if (employeeName != null && !employeeName.isBlank()) {
             String phone = waContact.getPhoneNumber();
+            log.info("AI sugeriu employee='{}' para telefone {} (contato: {} - {})",
+                    employeeName, phone, waContact.getName(), waContact.getId());
             // Primeiro: match direto por telefone + nome (ignore case)
             java.util.List<Employee> directMatches = employeeRepository.findByWaContact_PhoneNumberAndNameIgnoreCase(phone, employeeName);
             if (directMatches != null && !directMatches.isEmpty()) {
+                log.info("Match direto telefone+nome encontrou {} funcionário(s): {}",
+                        directMatches.size(),
+                        directMatches.stream().map(Employee::getName).reduce((a,b) -> a + ", " + b).orElse(""));
                 resolvedEmployee = directMatches.get(0);
             } else {
                 // Fallback: buscar por telefone e tentar resolver desambiguação
                 java.util.List<Employee> byPhone = employeeRepository.findByWaContact_PhoneNumber(phone);
                 if (byPhone != null && !byPhone.isEmpty()) {
+                    log.info("Busca por telefone encontrou {} funcionário(s) para {}: {}",
+                            byPhone.size(), phone,
+                            byPhone.stream().map(Employee::getName).reduce((a,b) -> a + ", " + b).orElse(""));
                     java.util.List<Employee> matches = byPhone.stream()
                             .filter(e -> e.getName() != null && e.getName().equalsIgnoreCase(employeeName))
                             .toList();
                     if (!matches.isEmpty()) {
                         resolvedEmployee = matches.get(0);
                     } else if (byPhone.size() == 1) {
+                        log.info("Sem match exato de nome, usando único funcionário pelo telefone");
                         resolvedEmployee = byPhone.get(0);
+                    } else {
+                        log.warn("Ambiguidade: múltiplos funcionários para telefone {} e nenhum match exato por nome='{}'",
+                                phone, employeeName);
                     }
                 }
             }
             if (resolvedEmployee != null) {
                 waMessage.setEmployee(resolvedEmployee);
-                waMessageService.saveMessage(waMessage);
+                WAMessage savedMsg = waMessageService.saveMessage(waMessage);
+                log.info("Mensagem vinculada ao funcionário | messageId={} | employeeId={} | employeeName={}",
+                        savedMsg != null ? savedMsg.getId() : null,
+                        resolvedEmployee.getId(),
+                        resolvedEmployee.getName());
+            } else {
+                log.info("Nenhum funcionário resolvido para phone={} e nome sugerido='{}'", phone, employeeName);
             }
         }
 
@@ -201,8 +221,14 @@ public class EvolutionEventService {
                         waMessageService.saveMessage(waMessage);
                         try {
                             Ticket ticket = ticketService.openTicket(waMessage, alertTerm, waContact, WAGroup, employeeForTicket);
-                            log.info("Ticket aberto | id={} | alerta={} | grupo={}",
-                                    ticket.getId(), alertTerm.getCode(), WAGroup.getGroupName());
+                            if (employeeForTicket != null) {
+                                log.info("Ticket aberto | id={} | alerta={} | grupo={} | employeeId={} | employeeName={}",
+                                        ticket.getId(), alertTerm.getCode(), WAGroup.getGroupName(),
+                                        employeeForTicket.getId(), employeeForTicket.getName());
+                            } else {
+                                log.info("Ticket aberto | id={} | alerta={} | grupo={} | sem funcionário associado",
+                                        ticket.getId(), alertTerm.getCode(), WAGroup.getGroupName());
+                            }
                         } catch (SchedulerException e) {
                             throw new RuntimeException(e);
                         }

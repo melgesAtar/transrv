@@ -22,6 +22,7 @@ public class DashboardSummaryDTO {
         private Integer currentEscalationLevel;
         private LocalDateTime createdAt;
         private LocalDateTime closedAt;
+        private String openingMessageContent;
     }
 }
 
