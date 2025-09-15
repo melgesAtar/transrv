@@ -45,7 +45,7 @@ public class AiClassifier {
 
             String requestBody = """
 {
-  "model": "gpt-5",
+  "model": "gpt-4o-mini",
   "temperature": 0.1,
   "max_tokens": 150,
   "response_format": { "type": "json_object" },
@@ -68,14 +68,44 @@ public class AiClassifier {
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             String body = response.body();
-            // Log menos poluído: apenas status e tamanho da resposta
-            org.slf4j.LoggerFactory.getLogger(AiClassifier.class)
-                    .debug("OpenAI status={} bodyLen={}", response.statusCode(), body != null ? body.length() : 0);
+            org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AiClassifier.class);
+            logger.debug("OpenAI status={} bodyLen={}", response.statusCode(), body != null ? body.length() : 0);
 
             Gson gson = new Gson();
 
             if (response.statusCode() / 100 != 2) {
-                throw new OpenAIException("OpenAI 4xx/5xx: status=" + response.statusCode());
+                // Logar o corpo para diagnosticar 400/422/etc
+                logger.error("OpenAI error status={} body={}", response.statusCode(), body);
+
+                // Fallback: se 400, tentar sem response_format (alguns modelos rejeitam)
+                if (response.statusCode() == 400) {
+                    String fallbackBody = ("{\n" +
+                            "  \"model\": \"gpt-4o-mini\",\n" +
+                            "  \"temperature\": 0.1,\n" +
+                            "  \"max_tokens\": 150,\n" +
+                            "  \"messages\": [\n" +
+                            "    { \"role\": \"system\", \"content\": %s },\n" +
+                            "    { \"role\": \"user\",   \"content\": %s }\n" +
+                            "  ]\n" +
+                            "}\n").formatted(toJsonString(prompt), toJsonString(messageContent));
+
+                    HttpRequest fallbackReq = HttpRequest.newBuilder()
+                            .uri(URI.create(API_URL))
+                            .header("Content-Type", "application/json")
+                            .header("Authorization", "Bearer " + openAiApiKey)
+                            .POST(HttpRequest.BodyPublishers.ofString(fallbackBody, StandardCharsets.UTF_8))
+                            .build();
+
+                    HttpResponse<String> fbRes = client.send(fallbackReq, HttpResponse.BodyHandlers.ofString());
+                    if (fbRes.statusCode() / 100 == 2) {
+                        logger.warn("OpenAI 400 com response_format; fallback sem response_format funcionou");
+                        return gson.fromJson(fbRes.body(), ResponseClassifierMessage.class);
+                    } else {
+                        logger.error("OpenAI fallback também falhou | status={} body={} ", fbRes.statusCode(), fbRes.body());
+                    }
+                }
+
+                throw new OpenAIException("OpenAI 4xx/5xx: status=" + response.statusCode() + " body=" + body);
             }
 
             return gson.fromJson(body, ResponseClassifierMessage.class);

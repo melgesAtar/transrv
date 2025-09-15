@@ -75,7 +75,7 @@ public class TicketService {
 
         scheduleEscalation(ticket, 2, Duration.ofMinutes(1));
         scheduleEscalation(ticket, 3, Duration.ofMinutes(2));
-        scheduleExpiration(ticket, Duration.ofHours(1));
+        scheduleExpiration(ticket, Duration.ofMinutes(20));
 
         return ticket;
     }
@@ -140,6 +140,9 @@ public class TicketService {
                 .build();
         Trigger trigger = TriggerBuilder.newTrigger()
                 .startAt(Date.from(Instant.now().plus(delay)))
+                .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
+                        .withRepeatCount(0)
+                        .withMisfireHandlingInstructionFireNow())
                 .build();
 
         scheduler.scheduleJob(job, trigger);
@@ -154,6 +157,9 @@ public class TicketService {
 
         Trigger trigger = TriggerBuilder.newTrigger()
                 .startAt(Date.from(Instant.now().plus(delay)))
+                .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
+                        .withRepeatCount(0)
+                        .withMisfireHandlingInstructionFireNow())
                 .build();
 
         scheduler.scheduleJob(job, trigger);
@@ -264,7 +270,8 @@ public class TicketService {
             Trigger trigger = TriggerBuilder.newTrigger()
                     .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
                             .withIntervalInMinutes(3)
-                            .repeatForever())
+                            .repeatForever()
+                            .withMisfireHandlingInstructionNowWithExistingCount())
                     .startAt(Date.from(Instant.now().plus(Duration.ofMinutes(1))))
                     .build();
 
