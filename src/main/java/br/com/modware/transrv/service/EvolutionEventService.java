@@ -141,7 +141,6 @@ public class EvolutionEventService {
         }
 
 
-        // Classificação usando o agente vinculado ao grupo
         if (waMessage.getMessageContent() == null || waMessage.getMessageContent().isBlank()) {
             log.warn("Mensagem vazia, pulando classificação para evitar erro na OpenAI");
             return;
