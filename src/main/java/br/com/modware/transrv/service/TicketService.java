@@ -45,7 +45,7 @@ public class TicketService {
     }
 
 
-    public Ticket openTicket(WAMessage waMessage, AlertTerm alertTerm, WAContact waContact, WAGroup waGroup) throws SchedulerException {
+    public Ticket openTicket(WAMessage waMessage, AlertTerm alertTerm, WAContact waContact, WAGroup waGroup, Employee employee) throws SchedulerException {
         if (waMessage == null || alertTerm == null || waContact == null || waGroup == null) {
             throw new IllegalArgumentException("Invalid parameters for opening a ticket");
         }
@@ -64,6 +64,9 @@ public class TicketService {
         ticket.setWaGroup(waGroup);
         ticket.setCurrentEscalationLevel(1);
         ticket.setContactResponsibleForOpeningTheCall(waContact);
+        if (employee != null) {
+            ticket.setEmployeeResponsibleForOpeningTheCall(employee);
+        }
 
         ticket = ticketRepository.save(ticket);
 

@@ -4,6 +4,7 @@ import br.com.modware.transrv.dto.evolution.EventEvolution;
 import br.com.modware.transrv.dto.openai.AiClassifierResponse;
 import br.com.modware.transrv.dto.openai.ResponseClassifierMessage;
 import br.com.modware.transrv.model.*;
+import br.com.modware.transrv.repository.EmployeeRepository;
 import com.google.gson.Gson;
 import org.quartz.SchedulerException;
 import org.springframework.stereotype.Service;
@@ -26,11 +27,12 @@ public class EvolutionEventService {
     private final AlertTermsService alertTermsService;
     private final TicketService ticketService;
     private final EvolutionApiClient evolutionApiClient;
+    private final EmployeeRepository employeeRepository;
 
     org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EvolutionEventService.class);
 
 
-    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, AIUsageService aiUsageService, WAMessageService waMessageService, AlertTermsService alertTermsService, TicketService ticketService, EvolutionApiClient evolutionApiClient) {
+    public EvolutionEventService(WAGroupService groupService, WAMessageService messageService, WAContactService waContactService, WAConversationService waConversationService, AiClassifier aiClassifier, AIUsageService aiUsageService, WAMessageService waMessageService, AlertTermsService alertTermsService, TicketService ticketService, EvolutionApiClient evolutionApiClient, EmployeeRepository employeeRepository) {
         this.groupService = groupService;
         this.messageService = messageService;
         this.waContactService = waContactService;
@@ -41,6 +43,7 @@ public class EvolutionEventService {
         this.alertTermsService = alertTermsService;
         this.ticketService = ticketService;
         this.evolutionApiClient = evolutionApiClient;
+        this.employeeRepository = employeeRepository;
     }
 
 
@@ -149,6 +152,35 @@ public class EvolutionEventService {
         Gson gson = new Gson();
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
 
+        // Vincular funcionário se veio do classificador
+        Employee resolvedEmployee = null;
+        String employeeName = classifierResponse.getEmployee();
+        if (employeeName != null && !employeeName.isBlank()) {
+            String phone = waContact.getPhoneNumber();
+            // Primeiro: match direto por telefone + nome (ignore case)
+            java.util.List<Employee> directMatches = employeeRepository.findByWaContact_PhoneNumberAndNameIgnoreCase(phone, employeeName);
+            if (directMatches != null && !directMatches.isEmpty()) {
+                resolvedEmployee = directMatches.get(0);
+            } else {
+                // Fallback: buscar por telefone e tentar resolver desambiguação
+                java.util.List<Employee> byPhone = employeeRepository.findByWaContact_PhoneNumber(phone);
+                if (byPhone != null && !byPhone.isEmpty()) {
+                    java.util.List<Employee> matches = byPhone.stream()
+                            .filter(e -> e.getName() != null && e.getName().equalsIgnoreCase(employeeName))
+                            .toList();
+                    if (!matches.isEmpty()) {
+                        resolvedEmployee = matches.get(0);
+                    } else if (byPhone.size() == 1) {
+                        resolvedEmployee = byPhone.get(0);
+                    }
+                }
+            }
+            if (resolvedEmployee != null) {
+                waMessage.setEmployee(resolvedEmployee);
+                waMessageService.saveMessage(waMessage);
+            }
+        }
+
         log.debug("AI Usage: {}", responseOpenAi.getUsage());
         AIUsage aiUsage = new AIUsage(
                 responseOpenAi.getUsage().getPromptTokens(),
@@ -159,6 +191,8 @@ public class EvolutionEventService {
         );
         aiUsageService.saveUsage(aiUsage);
 
+        final Employee employeeForTicket = resolvedEmployee;
+
         if (classifierResponse.isShouldOpen()) {
             String alertCode = classifierResponse.getAlertTerm();
 
@@ -167,7 +201,7 @@ public class EvolutionEventService {
                         waMessage.setAlertTerm(alertTerm);
                         waMessageService.saveMessage(waMessage);
                         try {
-                            Ticket ticket = ticketService.openTicket(waMessage, alertTerm, waContact, WAGroup);
+                            Ticket ticket = ticketService.openTicket(waMessage, alertTerm, waContact, WAGroup, employeeForTicket);
                             log.info("Ticket aberto | id={} | alerta={} | grupo={}",
                                     ticket.getId(), alertTerm.getCode(), WAGroup.getGroupName());
                         } catch (SchedulerException e) {

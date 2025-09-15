@@ -38,6 +38,10 @@ public class Ticket {
     @ManyToOne
     private WAGroup waGroup;
 
+    @ManyToOne
+    @JoinColumn(name = "employee_open_id")
+    private Employee employeeResponsibleForOpeningTheCall;
+
 
     public enum Status {
         OPEN,

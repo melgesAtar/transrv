@@ -1,6 +1,5 @@
 package br.com.modware.transrv.dto.openai;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 
@@ -8,6 +7,8 @@ import lombok.Data;
 public class AiClassifierResponse {
     @SerializedName("should_open")
     private boolean shouldOpen;
+    @SerializedName("employee")
+    private String employee;
     @SerializedName("alert_term")
     private String alertTerm;
 
