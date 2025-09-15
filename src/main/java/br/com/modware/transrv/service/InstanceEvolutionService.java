@@ -120,6 +120,42 @@ public class InstanceEvolutionService {
         }
     }
 
+    public boolean sendFinalizationToGroup(WAGroup waGroup, Ticket ticket) {
+        if (waGroup == null) return false;
+        String frame = "🟢".repeat(10);
+
+        long minutesOpen = 0;
+        try {
+            java.time.LocalDateTime end = ticket.getClosedAt() != null ? ticket.getClosedAt() : java.time.LocalDateTime.now(java.time.ZoneId.of("America/Sao_Paulo"));
+            minutesOpen = java.time.Duration.between(ticket.getCreatedAt(), end).toMinutes();
+        } catch (Exception ignored) {}
+
+        String body = String.format(
+                "*Ticket Finalizado*\n\n" +
+                        "*Grupo:* %s\n" +
+                        "*Alerta:* %s\n" +
+                        "*ID do Chamado:* %d\n" +
+                        "*Tempo total em aberto:* %d min",
+                waGroup.getGroupName(),
+                ticket.getAlertTerm() != null ? ticket.getAlertTerm().getCode() : "-",
+                ticket.getId(),
+                minutesOpen
+        );
+
+        String messageContent = frame + "\n" + body + "\n" + frame;
+
+        SendPlainText sendPlainText = new SendPlainText();
+        sendPlainText.setNumber(waGroup.getEvolutionGroupId());
+        sendPlainText.setText(messageContent);
+        sendPlainText.setLinkPreview(true);
+        try {
+            return sendMessage(sendPlainText);
+        } catch (InterruptedException | IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     private boolean sendMessage(SendPlainText sendPlainText) throws IOException, InterruptedException {
         String url = EVOLUTION_API_URL + "/message/sendText/" + "transRV";
 

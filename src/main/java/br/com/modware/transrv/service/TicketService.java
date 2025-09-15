@@ -180,6 +180,8 @@ public class TicketService {
             ticketRepository.save(ticket);
             // Atualiza dashboard em tempo real
             dashboardBroadcaster.publishUpdate();
+            // Notificar finalização no grupo em verde
+            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         }
     }
 
@@ -190,6 +192,8 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now());
             ticket = ticketRepository.save(ticket);
             dashboardBroadcaster.publishUpdate();
+            // Notificar finalização no grupo em verde
+            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         }
         return ticket;
     }
@@ -242,6 +246,8 @@ public class TicketService {
 
             // Atualiza dashboard em tempo real
             dashboardBroadcaster.publishUpdate();
+            // Notificar finalização no grupo em verde
+            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }

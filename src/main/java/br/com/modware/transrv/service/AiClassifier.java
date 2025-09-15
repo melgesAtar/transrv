@@ -45,7 +45,7 @@ public class AiClassifier {
 
             String requestBody = """
 {
-  "model": "gpt-4o-mini",
+  "model": "gpt-5",
   "temperature": 0.1,
   "max_tokens": 150,
   "response_format": { "type": "json_object" },
