@@ -73,8 +73,8 @@ public class TicketService {
         notifyEmployees(ticket, 1);
         dashboardBroadcaster.publishUpdate();
 
-        scheduleEscalation(ticket, 2, Duration.ofMinutes(1));
-        scheduleEscalation(ticket, 3, Duration.ofMinutes(2));
+        scheduleEscalation(ticket, 2, Duration.ofMinutes(5));
+        scheduleEscalation(ticket, 3, Duration.ofMinutes(5));
         scheduleExpiration(ticket, Duration.ofMinutes(20));
 
         return ticket;
@@ -265,13 +265,13 @@ public class TicketService {
                     .usingJobData("ticketId", ticket.getId())
                     .build();
 
-            // Disparo inicial após 10 minutos (carência para o nível 3 responder), depois a cada 3 minutos
+            // Disparo inicial após 10 minutos (carência para o nível 3 responder), depois a cada 10 minutos
             Trigger trigger = TriggerBuilder.newTrigger()
                     .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
-                            .withIntervalInMinutes(3)
+                            .withIntervalInMinutes(10)
                             .repeatForever()
                             .withMisfireHandlingInstructionNowWithExistingCount())
-                    .startAt(Date.from(Instant.now().plus(Duration.ofMinutes(1))))
+                    .startAt(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
                     .build();
 
             scheduler.scheduleJob(job, trigger);
