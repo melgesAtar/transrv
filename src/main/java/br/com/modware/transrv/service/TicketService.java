@@ -186,8 +186,7 @@ public class TicketService {
             ticketRepository.save(ticket);
             // Atualiza dashboard em tempo real
             dashboardBroadcaster.publishUpdate();
-            // Notificar finalização no grupo em verde
-            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
+            // Não enviar notificação de finalização ao grupo quando for expiração
         }
     }
 
