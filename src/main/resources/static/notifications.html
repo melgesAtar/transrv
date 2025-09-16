@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel - Notificações</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .muted { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: left; }
+    th { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+    .pill { padding: 2px 8px; border-radius: 9999px; background: #f3f4f6; font-size: 12px; }
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { min-width: 960px; }
+  </style>
+  <script>
+    async function fetchNotifications() {
+      const res = await fetch('/notifications');
+      return res.json();
+    }
+
+    function render(list) {
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      for (const n of (list || [])) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${n.id}</td>
+          <td>#${n.ticketId ?? '-'}</td>
+          <td>${n.groupName || '-'}</td>
+          <td>${n.alertCode || '-'}</td>
+          <td>${n.employeeName || '-'}</td>
+          <td>${n.employeePhone || '-'}</td>
+          <td>Nível ${n.escalationLevel}</td>
+          <td>${(n.notifiedAt || '').toString().replace('T',' ') || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function startStream() {
+      const es = new EventSource('/notifications/stream');
+      es.addEventListener('update', (e) => {
+        const data = JSON.parse(e.data);
+        render(data);
+      });
+      es.addEventListener('heartbeat', () => {});
+      es.onerror = () => { es.close(); setTimeout(startStream, 3000); };
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      render(await fetchNotifications());
+      startStream();
+    });
+  </script>
+  </head>
+<body>
+  <h1 style="margin-bottom:10px;">Acompanhamento de Notificações</h1>
+  <div class="card">
+    <div class="muted">Últimas 50 notificações</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Ticket</th>
+            <th>Grupo</th>
+            <th>Alerta</th>
+            <th>Funcionário</th>
+            <th>Telefone</th>
+            <th>Escalação</th>
+            <th>Notificado em</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
+
+
