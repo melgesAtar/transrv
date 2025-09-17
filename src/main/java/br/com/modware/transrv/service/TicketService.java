@@ -75,7 +75,6 @@ public class TicketService {
 
         scheduleEscalation(ticket, 2, Duration.ofMinutes(5));
         scheduleEscalation(ticket, 3, Duration.ofMinutes(5));
-        scheduleExpiration(ticket, Duration.ofMinutes(20));
 
         return ticket;
     }
