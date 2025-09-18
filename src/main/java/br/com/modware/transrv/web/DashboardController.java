@@ -42,6 +42,12 @@ public class DashboardController {
         ticketService.closeByDashboard(id);
         return org.springframework.http.ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/tickets/{id}/incorrect")
+    public org.springframework.http.ResponseEntity<Void> markIncorrect(@PathVariable Long id) {
+        ticketService.closeAsIncorrect(id);
+        return org.springframework.http.ResponseEntity.noContent().build();
+    }
 }
 
 

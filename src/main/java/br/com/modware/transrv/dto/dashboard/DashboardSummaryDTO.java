@@ -23,6 +23,7 @@ public class DashboardSummaryDTO {
         private LocalDateTime createdAt;
         private LocalDateTime closedAt;
         private String openingMessageContent;
+        private Boolean openedIncorrectly;
     }
 }
 

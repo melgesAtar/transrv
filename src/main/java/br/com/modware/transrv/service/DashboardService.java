@@ -41,6 +41,7 @@ public class DashboardService {
             if (t.getMessageResponsibleForOpeningTheCall() != null) {
                 dto.setOpeningMessageContent(t.getMessageResponsibleForOpeningTheCall().getMessageContent());
             }
+            dto.setOpenedIncorrectly(t.getOpenedIncorrectly());
             return dto;
         }).collect(Collectors.toList());
         s.setRecent(mapped);

@@ -130,16 +130,19 @@ public class InstanceEvolutionService {
             minutesOpen = java.time.Duration.between(ticket.getCreatedAt(), end).toMinutes();
         } catch (Exception ignored) {}
 
+        boolean incorrect = Boolean.TRUE.equals(ticket.getOpenedIncorrectly());
+        String reason = incorrect ? "\n*Motivo:* Abertura incorreta" : "";
         String body = String.format(
                 "*Ticket Finalizado*\n\n" +
                         "*Grupo:* %s\n" +
                         "*Alerta:* %s\n" +
                         "*ID do Chamado:* %d\n" +
-                        "*Tempo total em aberto:* %d min",
+                        "*Tempo total em aberto:* %d min%s",
                 waGroup.getGroupName(),
                 ticket.getAlertTerm() != null ? ticket.getAlertTerm().getCode() : "-",
                 ticket.getId(),
-                minutesOpen
+                minutesOpen,
+                reason
         );
 
         String messageContent = frame + "\n" + body + "\n" + frame;

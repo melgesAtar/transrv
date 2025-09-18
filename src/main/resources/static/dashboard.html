@@ -135,7 +135,7 @@
             <button class="icon-btn msg-btn" title="Ver mensagem de abertura" aria-label="Mensagem de abertura">📨</button>
           </td>
           <td>
-            ${t.status === 'OPEN' ? `<button class="pill close-ticket-btn" data-id="${t.id}">Fechar</button>` : '-'}
+            ${t.status === 'OPEN' ? `<button class="pill close-ticket-btn" data-id="${t.id}">Fechar</button> <button class="pill incorrect-btn" data-id="${t.id}">Aberto incorretamente</button>` : '-'}
           </td>
           <td>
             <div class="sla"><div class="fill"></div></div>
@@ -185,6 +185,19 @@
             }
           } catch (e) {
             alert('Erro ao fechar chamado: ' + e.message);
+          }
+        }
+        if (target && target.classList && target.classList.contains('incorrect-btn')) {
+          const id = target.getAttribute('data-id');
+          if (!id) return;
+          if (!confirm('Marcar como ABERTO INCORRETAMENTE e encerrar o chamado #' + id + '?')) return;
+          try {
+            const res = await fetch(`/dashboard/tickets/${id}/incorrect`, { method: 'POST' });
+            if (!res.ok && res.status !== 204) {
+              alert('Falha ao encerrar como aberto incorretamente #' + id);
+            }
+          } catch (e) {
+            alert('Erro: ' + e.message);
           }
         }
       });

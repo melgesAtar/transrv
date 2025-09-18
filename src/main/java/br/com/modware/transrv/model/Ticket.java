@@ -42,6 +42,9 @@ public class Ticket {
     @JoinColumn(name = "employee_open_id")
     private Employee employeeResponsibleForOpeningTheCall;
 
+    // Feedback: ticket foi aberto incorretamente
+    private Boolean openedIncorrectly = false;
+
 
     public enum Status {
         OPEN,
