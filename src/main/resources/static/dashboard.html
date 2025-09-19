@@ -104,6 +104,58 @@
     let timersIntervalId;
     let lastSummary = null;
 
+    const AUTH_KEY = 'authUser';
+
+    function isLoggedIn() {
+      return !!localStorage.getItem(AUTH_KEY);
+    }
+
+    function showLogin() {
+      const loginEl = document.getElementById('login');
+      const appEl = document.getElementById('app');
+      const bar = document.getElementById('userBar');
+      if (loginEl) loginEl.style.display = 'block';
+      if (appEl) appEl.style.display = 'none';
+      if (bar) bar.style.display = 'none';
+    }
+
+    function showApp() {
+      const loginEl = document.getElementById('login');
+      const appEl = document.getElementById('app');
+      const bar = document.getElementById('userBar');
+      const welcome = document.getElementById('welcomeUser');
+      if (loginEl) loginEl.style.display = 'none';
+      if (appEl) appEl.style.display = 'block';
+      if (bar) bar.style.display = 'flex';
+      if (welcome) welcome.textContent = 'Olá, ' + (localStorage.getItem(AUTH_KEY) || '');
+
+      // Inicia SSE e handlers imediatamente para não depender do resumo inicial
+      startStream();
+      attachTableHandlers();
+      setupFilter();
+
+      // Busca resumo em paralelo, sem bloquear a UI/stream
+      fetchSummary()
+        .then(s => { if (s) renderSummary(s); })
+        .catch(err => { console.warn('Falha ao carregar resumo inicial:', err); });
+    }
+
+    function login() {
+      const user = (document.getElementById('user') || {}).value || '';
+      const pass = (document.getElementById('pass') || {}).value || '';
+      if (user === 'admin' && pass === 'of8mMaG3,(20') {
+        localStorage.setItem(AUTH_KEY, user);
+        showApp();
+      } else {
+        alert('Credenciais inválidas');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem(AUTH_KEY);
+      location.reload();
+    }
+
     function getCurrentFilter() {
       const el = document.getElementById('statusFilter');
       return el ? el.value : 'ALL';
@@ -218,6 +270,15 @@
       });
     }
 
+    function setupFilter() {
+      const filterEl = document.getElementById('statusFilter');
+      if (filterEl) {
+        filterEl.addEventListener('change', () => {
+          if (lastSummary) renderSummary(lastSummary);
+        });
+      }
+    }
+
     function openModal(title, content) {
       const modal = document.getElementById('msgModal');
       modal.classList.add('open');
@@ -230,19 +291,37 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      renderSummary(await fetchSummary());
-      startStream();
-      attachTableHandlers();
-      const filterEl = document.getElementById('statusFilter');
-      if (filterEl) {
-        filterEl.addEventListener('change', () => {
-          if (lastSummary) renderSummary(lastSummary);
-        });
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) loginBtn.addEventListener('click', login);
+      const passEl = document.getElementById('pass');
+      if (passEl) passEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+      if (isLoggedIn()) {
+        showApp();
+      } else {
+        showLogin();
       }
     });
   </script>
 </head>
 <body>
+  <div id="userBar" style="display:none; justify-content: flex-end; gap: 8px; align-items: center; margin-bottom: 10px;">
+    <span id="welcomeUser" class="muted"></span>
+    <button id="logoutBtn" class="pill">Sair</button>
+  </div>
+
+  <div id="login" class="card" style="max-width: 360px; margin: 60px auto; display: none;">
+    <div class="muted" style="margin-bottom:8px;">Login</div>
+    <div style="display:flex; flex-direction: column; gap: 8px;">
+      <input id="user" placeholder="Usuário" style="padding:8px; border:1px solid #e5e7eb; border-radius:6px;" />
+      <input id="pass" type="password" placeholder="Senha" style="padding:8px; border:1px solid #e5e7eb; border-radius:6px;" />
+      <button id="loginBtn" class="pill">Entrar</button>
+    </div>
+  </div>
+
+  <div id="app" style="display:none;">
   <h1 style="margin-bottom:10px;">Acompanhamento de Chamados</h1>
   <div class="cards">
     <div class="card"><div class="muted">Abertos (últimas 24h)</div><div class="value" id="open">-</div></div>
@@ -294,6 +373,7 @@
         <button class="pill" onclick="closeModal()">Fechar</button>
       </div>
     </div>
+  </div>
   </div>
 </body>
 </html>
