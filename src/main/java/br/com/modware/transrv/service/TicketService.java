@@ -73,8 +73,8 @@ public class TicketService {
         notifyEmployees(ticket, 1);
         dashboardBroadcaster.publishUpdate();
 
-        scheduleEscalation(ticket, 2, Duration.ofMinutes(5));
-        scheduleEscalation(ticket, 3, Duration.ofMinutes(5));
+		scheduleEscalation(ticket, 2, Duration.ofMinutes(1));
+		scheduleEscalation(ticket, 3, Duration.ofMinutes(2));
           
         return ticket;
     }
@@ -171,7 +171,6 @@ public class TicketService {
         notifyEmployees(ticket, level);
         dashboardBroadcaster.publishUpdate();
 
-        // Se chegou ao nível 3, iniciar alerta em loop no grupo
         if (level == 3) {
             scheduleGroupLoopAlert(ticket);
         }
@@ -183,9 +182,7 @@ public class TicketService {
             ticket.setStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION);
             ticket.setClosedAt(LocalDateTime.now());
             ticketRepository.save(ticket);
-            // Atualiza dashboard em tempo real
             dashboardBroadcaster.publishUpdate();
-            // Não enviar notificação de finalização ao grupo quando for expiração
         }
     }
 
@@ -196,7 +193,6 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now());
             ticket = ticketRepository.save(ticket);
             dashboardBroadcaster.publishUpdate();
-            // Notificar finalização no grupo em verde
             instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         }
         return ticket;
@@ -226,7 +222,6 @@ public class TicketService {
 
 
 
-    // método de agendamento por horário removido conforme nova regra de notificação imediata
 
     public boolean tryCloseTicket(String stanzaId, String messageContent, WAContact closingContact, WAMessage closingMessage) {
         boolean closed = false;
@@ -269,9 +264,7 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
 
-            // Atualiza dashboard em tempo real
             dashboardBroadcaster.publishUpdate();
-            // Notificar finalização no grupo em verde
             instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
@@ -285,13 +278,13 @@ public class TicketService {
                     .usingJobData("ticketId", ticket.getId())
                     .build();
 
-            // Disparo inicial após 10 minutos (carência para o nível 3 responder), depois a cada 10 minutos
+			// Disparo inicial após 1 minuto (carência para o nível 3 responder), depois a cada 1 minuto
             Trigger trigger = TriggerBuilder.newTrigger()
                     .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
-                            .withIntervalInMinutes(10)
+							.withIntervalInMinutes(1)
                             .repeatForever()
                             .withMisfireHandlingInstructionNowWithExistingCount())
-                    .startAt(Date.from(Instant.now().plus(Duration.ofMinutes(10))))
+					.startAt(Date.from(Instant.now().plus(Duration.ofMinutes(1))))
                     .build();
 
             scheduler.scheduleJob(job, trigger);

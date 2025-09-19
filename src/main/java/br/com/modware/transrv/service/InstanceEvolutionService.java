@@ -47,7 +47,7 @@ public class InstanceEvolutionService {
                         "*Alerta:* %s\n" +
                         "*Mensagem:* %s\n\n" +
                         "➡️ Responsáveis notificados: %s\n\n" +
-                        "Para encerrar este chamado, responda a mensagem no grupo ou envie uma mensagem com o *ID* abaixo:\n\n" +
+                        "Para encerrar, envie no grupo: 'ticket finalizado id %d'\n\n" +
                         "*ID do Chamado:* %d\n" +
                         "*Nível de Prioridade:* %d\n" +
                         "*Tempo em aberto:* %d min",
@@ -55,6 +55,7 @@ public class InstanceEvolutionService {
                 ticket.getAlertTerm().getCode(),
                 ticket.getMessageResponsibleForOpeningTheCall().getMessageContent(),
                 employeeNames,
+                ticket.getId(),
                 ticket.getId(),
                 level,
                 minutesOpen
