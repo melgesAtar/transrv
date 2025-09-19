@@ -42,6 +42,10 @@ public class Ticket {
     @JoinColumn(name = "employee_open_id")
     private Employee employeeResponsibleForOpeningTheCall;
 
+    @ManyToOne
+    @JoinColumn(name = "employee_close_id")
+    private Employee employeeResponsibleForClosingTheCall;
+
     // Feedback: ticket foi aberto incorretamente
     private Boolean openedIncorrectly = false;
 

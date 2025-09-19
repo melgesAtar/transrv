@@ -127,20 +127,6 @@ public class EvolutionEventService {
 
         WAMessage waMessage = messageService.processMessage(eventEvolution, waConversation, waContact, WAGroup);
 
-        boolean closed = ticketService.tryCloseTicket(
-                eventEvolution.getData().getContextInfo() != null ? eventEvolution.getData().getContextInfo().getStanzaId() : null,
-                waMessage.getMessageContent(),
-                waContact,
-                waMessage
-        );
-
-        if (closed) {
-            log.info("Ticket fechado pela mensagem recebida no grupo={} por usuário={}({})",
-                    WAGroup.getGroupName(), waContact.getName(), waContact.getPhoneNumber());
-            return;
-        }
-
-
         if (waMessage.getMessageContent() == null || waMessage.getMessageContent().isBlank()) {
             log.warn("Mensagem vazia, pulando classificação para evitar erro na OpenAI");
             return;
@@ -241,6 +227,19 @@ public class EvolutionEventService {
             }
             log.info("Mensagem não necessita de abertura de ticket | grupo={} | usuário={}({}) | conteúdo={}",
                     WAGroup.getGroupName(), waContact.getName(), waContact.getPhoneNumber(), content);
+        }
+
+        // Após classificador, tentar fechar (assim o employee pode ter sido resolvido na WAMessage)
+        boolean closed = ticketService.tryCloseTicket(
+                eventEvolution.getData().getContextInfo() != null ? eventEvolution.getData().getContextInfo().getStanzaId() : null,
+                waMessage.getMessageContent(),
+                waContact,
+                waMessage
+        );
+
+        if (closed) {
+            log.info("Ticket fechado pela mensagem recebida no grupo={} por usuário={}({})",
+                    WAGroup.getGroupName(), waContact.getName(), waContact.getPhoneNumber());
         }
     }
 

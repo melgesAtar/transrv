@@ -256,6 +256,9 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
             ticket.setContactResponsibleForClosingTheCall(closingContact);
             ticket.setMessageResponsibleForClosingTheCall(closingMessage);
+            if (closingMessage != null && closingMessage.getEmployee() != null) {
+                ticket.setEmployeeResponsibleForClosingTheCall(closingMessage.getEmployee());
+            }
             ticketRepository.save(ticket);
 
 

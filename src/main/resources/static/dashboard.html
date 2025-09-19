@@ -102,16 +102,31 @@
     }
 
     let timersIntervalId;
+    let lastSummary = null;
+
+    function getCurrentFilter() {
+      const el = document.getElementById('statusFilter');
+      return el ? el.value : 'ALL';
+    }
+
+    function filterTickets(list, filter) {
+      if (!Array.isArray(list)) return [];
+      if (filter === 'OPEN') return list.filter(t => t.status === 'OPEN');
+      if (filter === 'CLOSED') return list.filter(t => t.status && t.status !== 'OPEN');
+      return list;
+    }
 
     function renderSummary(s) {
+      lastSummary = s;
       document.getElementById('open').textContent = s.open;
       document.getElementById('closed').textContent = s.closed;
-      document.getElementById('cws').textContent = s.closedWithoutSolution;
       // removido campo "abertos hoje" do dashboard
 
       const tbody = document.getElementById('recent');
       tbody.innerHTML = '';
-      for (const t of (s.recent || [])) {
+      const currentFilter = getCurrentFilter();
+      const filtered = filterTickets((s.recent || []), currentFilter);
+      for (const t of filtered) {
         const tr = document.createElement('tr');
         const createdMs = normalizeToMs(t.createdAt);
         const closedMs = normalizeToMs(t.closedAt);
@@ -218,6 +233,12 @@
       renderSummary(await fetchSummary());
       startStream();
       attachTableHandlers();
+      const filterEl = document.getElementById('statusFilter');
+      if (filterEl) {
+        filterEl.addEventListener('change', () => {
+          if (lastSummary) renderSummary(lastSummary);
+        });
+      }
     });
   </script>
 </head>
@@ -226,11 +247,20 @@
   <div class="cards">
     <div class="card"><div class="muted">Abertos (últimas 24h)</div><div class="value" id="open">-</div></div>
     <div class="card"><div class="muted">Fechados (últimas 24h)</div><div class="value" id="closed">-</div></div>
-    <div class="card"><div class="muted">Fechados s/ solução (últimas 24h)</div><div class="value" id="cws">-</div></div>
   </div>
 
   <div class="card">
-    <div class="muted">Últimos 20</div>
+    <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 8px;">
+      <div class="muted">Últimos 20</div>
+      <div>
+        <label for="statusFilter" class="muted" style="margin-right:8px;">Filtrar</label>
+        <select id="statusFilter" aria-label="Filtrar por status">
+          <option value="ALL">Todos</option>
+          <option value="OPEN">Abertos</option>
+          <option value="CLOSED">Fechados</option>
+        </select>
+      </div>
+    </div>
     <div class="table-wrap">
     <table>
       <thead>
@@ -267,5 +297,3 @@
   </div>
 </body>
 </html>
-
-
