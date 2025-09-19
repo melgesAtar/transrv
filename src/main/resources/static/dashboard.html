@@ -71,6 +71,7 @@
     function updateTimers() {
       const now = Date.now();
       const rows = document.querySelectorAll('#recent tr');
+      // dbg('updateTimers: rows=', rows.length);
       rows.forEach(tr => {
         const createdMsAttr = tr.getAttribute('data-created-ms');
         const closedMsAttr = tr.getAttribute('data-closed-ms');
@@ -105,9 +106,12 @@
     let lastSummary = null;
 
     const AUTH_KEY = 'authUser';
+    function dbg() { try { console.debug('[FE]', ...arguments); } catch (_) {} }
 
     function isLoggedIn() {
-      return !!localStorage.getItem(AUTH_KEY);
+      const v = !!localStorage.getItem(AUTH_KEY);
+      dbg('isLoggedIn=', v);
+      return v;
     }
 
     function showLogin() {
@@ -117,6 +121,7 @@
       if (loginEl) loginEl.style.display = 'block';
       if (appEl) appEl.style.display = 'none';
       if (bar) bar.style.display = 'none';
+      dbg('UI -> showLogin');
     }
 
     function showApp() {
@@ -130,14 +135,15 @@
       if (welcome) welcome.textContent = 'Olá, ' + (localStorage.getItem(AUTH_KEY) || '');
 
       // Inicia SSE e handlers imediatamente para não depender do resumo inicial
+      dbg('UI -> showApp: starting SSE and handlers');
       startStream();
       attachTableHandlers();
       setupFilter();
 
       // Busca resumo em paralelo, sem bloquear a UI/stream
       fetchSummary()
-        .then(s => { if (s) renderSummary(s); })
-        .catch(err => { console.warn('Falha ao carregar resumo inicial:', err); });
+        .then(s => { dbg('fetchSummary OK'); if (s) renderSummary(s); })
+        .catch(err => { console.warn('[FE] Falha ao carregar resumo inicial:', err); });
     }
 
     function login() {
@@ -145,14 +151,17 @@
       const pass = (document.getElementById('pass') || {}).value || '';
       if (user === 'admin' && pass === 'of8mMaG3,(20') {
         localStorage.setItem(AUTH_KEY, user);
+        dbg('login OK para usuário', user);
         showApp();
       } else {
+        console.warn('[FE] Login inválido', { user });
         alert('Credenciais inválidas');
       }
     }
 
     function logout() {
       localStorage.removeItem(AUTH_KEY);
+      dbg('logout');
       location.reload();
     }
 
@@ -170,6 +179,7 @@
 
     function renderSummary(s) {
       lastSummary = s;
+      dbg('renderSummary: counts', { open: s.open, closed: s.closed, recent: (s.recent||[]).length });
       document.getElementById('open').textContent = s.open;
       document.getElementById('closed').textContent = s.closed;
       // removido campo "abertos hoje" do dashboard
@@ -178,6 +188,7 @@
       tbody.innerHTML = '';
       const currentFilter = getCurrentFilter();
       const filtered = filterTickets((s.recent || []), currentFilter);
+      dbg('renderSummary: filter', currentFilter, '=> rows', filtered.length);
       for (const t of filtered) {
         const tr = document.createElement('tr');
         const createdMs = normalizeToMs(t.createdAt);
@@ -224,13 +235,16 @@
     }
 
     function startStream() {
+      dbg('SSE: connecting to /dashboard/stream');
       const es = new EventSource('/dashboard/stream');
+      es.onopen = () => dbg('SSE: open');
       es.addEventListener('update', (e) => {
         const data = JSON.parse(e.data);
+        dbg('SSE: update received');
         renderSummary(data);
       });
       es.addEventListener('heartbeat', () => {});
-      es.onerror = () => { es.close(); setTimeout(startStream, 3000); };
+      es.onerror = (err) => { console.error('[FE] SSE error', err); es.close(); setTimeout(startStream, 3000); };
     }
 
     function attachTableHandlers() {
@@ -239,6 +253,7 @@
         if (target && target.classList && target.classList.contains('msg-btn')) {
           const content = target.dataset.message || '';
           const ticketId = target.dataset.ticketId || '';
+          dbg('click: msg-btn', { ticketId });
           openModal(`Mensagem responsável pela abertura (#${ticketId})`, content || '(sem conteúdo)');
         }
         if (target && target.classList && target.classList.contains('close-ticket-btn')) {
@@ -246,11 +261,14 @@
           if (!id) return;
           if (!confirm('Confirmar fechamento do chamado #' + id + '?')) return;
           try {
+            dbg('fetch: close ticket', { id });
             const res = await fetch(`/dashboard/tickets/${id}/close`, { method: 'POST' });
+            dbg('fetch: close ticket response', { status: res.status, ok: res.ok });
             if (!res.ok && res.status !== 204) {
               alert('Falha ao fechar chamado #' + id);
             }
           } catch (e) {
+            console.error('[FE] Erro close', e);
             alert('Erro ao fechar chamado: ' + e.message);
           }
         }
@@ -259,11 +277,14 @@
           if (!id) return;
           if (!confirm('Marcar como ABERTO INCORRETAMENTE e encerrar o chamado #' + id + '?')) return;
           try {
+            dbg('fetch: incorrect close', { id });
             const res = await fetch(`/dashboard/tickets/${id}/incorrect`, { method: 'POST' });
+            dbg('fetch: incorrect response', { status: res.status, ok: res.ok });
             if (!res.ok && res.status !== 204) {
               alert('Falha ao encerrar como aberto incorretamente #' + id);
             }
           } catch (e) {
+            console.error('[FE] Erro incorrect', e);
             alert('Erro: ' + e.message);
           }
         }
@@ -291,6 +312,8 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      window.addEventListener('error', (e) => console.error('[FE] window error', e.error || e.message));
+      window.addEventListener('unhandledrejection', (e) => console.error('[FE] unhandled', e.reason));
       const loginBtn = document.getElementById('loginBtn');
       if (loginBtn) loginBtn.addEventListener('click', login);
       const passEl = document.getElementById('pass');

@@ -190,8 +190,16 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
         if (ticket.getStatus() == Ticket.Status.OPEN) {
             ticket.setStatus(Ticket.Status.CLOSED);
-            ticket.setClosedAt(LocalDateTime.now());
+            ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
             ticket = ticketRepository.save(ticket);
+            try {
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
+            } catch (SchedulerException e) {
+                throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
+            }
             dashboardBroadcaster.publishUpdate();
             instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         }
