@@ -6,6 +6,7 @@ import br.com.modware.transrv.quartz.ExpireTicketJob;
 import br.com.modware.transrv.repository.EmployeeAlertTermRepository;
 import br.com.modware.transrv.repository.TicketRepository;
 import org.quartz.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -28,6 +29,19 @@ public class TicketService {
     private final TicketNotificationService ticketNotificationService;
 
     private final DashboardBroadcaster dashboardBroadcaster;
+
+    // Parâmetros externos (application.properties)
+    @Value("${app.escalation.level2.delay-seconds:300}")
+    private long escalationLevel2DelaySeconds;
+
+    @Value("${app.escalation.level3.delay-seconds:600}")
+    private long escalationLevel3DelaySeconds;
+
+    @Value("${app.group-loop.interval-seconds:300}")
+    private long groupLoopIntervalSeconds;
+
+    @Value("${app.group-loop.initial-delay-seconds:300}")
+    private long groupLoopInitialDelaySeconds;
 
     public TicketService(TicketRepository ticketRepository,
                           EmployeeAlertTermRepository employeeAlertTermRepository,
@@ -73,8 +87,8 @@ public class TicketService {
         notifyEmployees(ticket, 1);
         dashboardBroadcaster.publishUpdate();
 
-		scheduleEscalation(ticket, 2, Duration.ofMinutes(1));
-		scheduleEscalation(ticket, 3, Duration.ofMinutes(2));
+        scheduleEscalation(ticket, 2, Duration.ofSeconds(escalationLevel2DelaySeconds));
+        scheduleEscalation(ticket, 3, Duration.ofSeconds(escalationLevel3DelaySeconds));
           
         return ticket;
     }
@@ -289,13 +303,12 @@ public class TicketService {
                     .usingJobData("ticketId", ticket.getId())
                     .build();
 
-			// Disparo inicial após 1 minuto (carência para o nível 3 responder), depois a cada 1 minuto
             Trigger trigger = TriggerBuilder.newTrigger()
                     .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
-							.withIntervalInMinutes(1)
+                            .withIntervalInSeconds((int) groupLoopIntervalSeconds)
                             .repeatForever()
                             .withMisfireHandlingInstructionNowWithExistingCount())
-					.startAt(Date.from(Instant.now().plus(Duration.ofMinutes(1))))
+                    .startAt(Date.from(Instant.now().plus(Duration.ofSeconds(groupLoopInitialDelaySeconds))))
                     .build();
 
             scheduler.scheduleJob(job, trigger);

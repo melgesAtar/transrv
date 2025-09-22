@@ -22,13 +22,6 @@ public class Employee {
     @Getter
     private WAContact waContact;
 
-    @Getter
-    private LocalTime enterTime;
-    @Getter
-    private LocalTime exitTime;
-
-    private Integer priorityLevel;
-
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;

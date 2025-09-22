@@ -135,7 +135,7 @@ public class EvolutionEventService {
         ResponseClassifierMessage responseOpenAi = aiClassifier.ticketClassification(waMessage.getMessageContent(), groupAgent);
         String contentJson = responseOpenAi.getChoices().get(0).getMessage().getContent();
         Gson gson = new Gson();
-        // Logar somente a resposta do ChatGPT (conteúdo bruto)
+
         log.info("ChatGPT content: {}", contentJson);
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
 
