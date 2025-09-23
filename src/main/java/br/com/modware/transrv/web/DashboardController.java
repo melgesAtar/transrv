@@ -1,6 +1,8 @@
 package br.com.modware.transrv.web;
 
 import br.com.modware.transrv.service.DashboardService;
+import org.springframework.beans.factory.annotation.Value;
+import br.com.modware.transrv.dto.dashboard.DashboardConfigDTO;
 import br.com.modware.transrv.service.TicketService;
 import br.com.modware.transrv.service.DashboardBroadcaster;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +20,10 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final TicketService ticketService;
     private final DashboardBroadcaster broadcaster;
+    @Value("${app.escalation.level2.delay-seconds:300}")
+    private long escalationLevel2DelaySeconds;
+    @Value("${app.escalation.level3.delay-seconds:600}")
+    private long escalationLevel3DelaySeconds;
 
     public DashboardController(DashboardService dashboardService, TicketService ticketService, DashboardBroadcaster broadcaster) {
         this.dashboardService = dashboardService;
@@ -47,6 +53,14 @@ public class DashboardController {
     public org.springframework.http.ResponseEntity<Void> markIncorrect(@PathVariable Long id) {
         ticketService.closeAsIncorrect(id);
         return org.springframework.http.ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/config")
+    public DashboardConfigDTO getConfig() {
+        DashboardConfigDTO dto = new DashboardConfigDTO();
+        dto.setEscalationLevel2Seconds(escalationLevel2DelaySeconds);
+        dto.setEscalationLevel3Seconds(escalationLevel3DelaySeconds);
+        return dto;
     }
 }
 

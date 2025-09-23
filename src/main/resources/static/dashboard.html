@@ -43,9 +43,22 @@
       return res.json();
     }
 
-    // Thresholds alinhados com TicketService: nível 2 em 1min, nível 3 em 2min
-    const LEVEL2_SECONDS = 60;  // scheduleEscalation(..., 2, Duration.ofMinutes(1))
-    const LEVEL3_SECONDS = 120; // scheduleEscalation(..., 3, Duration.ofMinutes(2))
+    // Thresholds carregados do backend (fallback para 300/600)
+    let LEVEL2_SECONDS = 300;
+    let LEVEL3_SECONDS = 600;
+
+    async function fetchConfig() {
+      try {
+        const res = await fetch('/dashboard/config');
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (typeof cfg.escalationLevel2Seconds === 'number') LEVEL2_SECONDS = cfg.escalationLevel2Seconds;
+        if (typeof cfg.escalationLevel3Seconds === 'number') LEVEL3_SECONDS = cfg.escalationLevel3Seconds;
+        dbg('Config carregada', { LEVEL2_SECONDS, LEVEL3_SECONDS });
+      } catch (e) {
+        console.warn('[FE] Falha ao carregar config, usando defaults.', e);
+      }
+    }
 
     function normalizeToMs(value) {
       if (!value) return NaN;
@@ -136,6 +149,8 @@
 
       // Inicia SSE e handlers imediatamente para não depender do resumo inicial
       dbg('UI -> showApp: starting SSE and handlers');
+      // Carrega config primeiro, depois inicia SSE
+      await fetchConfig();
       startStream();
       attachTableHandlers();
       setupFilter();
