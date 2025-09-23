@@ -43,6 +43,9 @@ public class TicketService {
     @Value("${app.group-loop.initial-delay-seconds:300}")
     private long groupLoopInitialDelaySeconds;
 
+    @Value("${app.ticket.expiration-seconds:21600}")
+    private long ticketExpirationSeconds;
+
     public TicketService(TicketRepository ticketRepository,
                           EmployeeAlertTermRepository employeeAlertTermRepository,
                          InstanceEvolutionService instanceEvolutionService,
@@ -89,6 +92,7 @@ public class TicketService {
 
         scheduleEscalation(ticket, 2, Duration.ofSeconds(escalationLevel2DelaySeconds));
         scheduleEscalation(ticket, 3, Duration.ofSeconds(escalationLevel3DelaySeconds));
+        scheduleExpiration(ticket, Duration.ofSeconds(ticketExpirationSeconds));
           
         return ticket;
     }
@@ -194,9 +198,17 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
         if (ticket.getStatus() == Ticket.Status.OPEN) {
             ticket.setStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION);
-            ticket.setClosedAt(LocalDateTime.now());
+            ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
             ticketRepository.save(ticket);
             dashboardBroadcaster.publishUpdate();
+            try {
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
+                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
+            } catch (SchedulerException e) {
+                throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
+            }
         }
     }
 
