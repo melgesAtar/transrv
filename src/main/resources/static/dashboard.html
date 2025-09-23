@@ -38,9 +38,8 @@
     }
   </style>
   <script>
-    async function fetchSummary() {
-      const res = await fetch('/dashboard/summary');
-      return res.json();
+    function fetchSummary() {
+      return fetch('/dashboard/summary').then(res => res.json());
     }
 
     // Thresholds carregados do backend (fallback para 300/600)
@@ -137,7 +136,7 @@
       dbg('UI -> showLogin');
     }
 
-    function showApp() {
+    async function showApp() {
       const loginEl = document.getElementById('login');
       const appEl = document.getElementById('app');
       const bar = document.getElementById('userBar');
@@ -263,7 +262,7 @@
     }
 
     function attachTableHandlers() {
-      document.addEventListener('click', async (ev) => {
+      document.addEventListener('click', (ev) => {
         const target = ev.target;
         if (target && target.classList && target.classList.contains('msg-btn')) {
           const content = target.dataset.message || '';
@@ -275,33 +274,35 @@
           const id = target.getAttribute('data-id');
           if (!id) return;
           if (!confirm('Confirmar fechamento do chamado #' + id + '?')) return;
-          try {
-            dbg('fetch: close ticket', { id });
-            const res = await fetch(`/dashboard/tickets/${id}/close`, { method: 'POST' });
-            dbg('fetch: close ticket response', { status: res.status, ok: res.ok });
-            if (!res.ok && res.status !== 204) {
-              alert('Falha ao fechar chamado #' + id);
-            }
-          } catch (e) {
-            console.error('[FE] Erro close', e);
-            alert('Erro ao fechar chamado: ' + e.message);
-          }
+          dbg('fetch: close ticket', { id });
+          fetch(`/dashboard/tickets/${id}/close`, { method: 'POST' })
+            .then(res => {
+              dbg('fetch: close ticket response', { status: res.status, ok: res.ok });
+              if (!res.ok && res.status !== 204) {
+                alert('Falha ao fechar chamado #' + id);
+              }
+            })
+            .catch(e => {
+              console.error('[FE] Erro close', e);
+              alert('Erro ao fechar chamado: ' + e.message);
+            });
         }
         if (target && target.classList && target.classList.contains('incorrect-btn')) {
           const id = target.getAttribute('data-id');
           if (!id) return;
           if (!confirm('Marcar como ABERTO INCORRETAMENTE e encerrar o chamado #' + id + '?')) return;
-          try {
-            dbg('fetch: incorrect close', { id });
-            const res = await fetch(`/dashboard/tickets/${id}/incorrect`, { method: 'POST' });
-            dbg('fetch: incorrect response', { status: res.status, ok: res.ok });
-            if (!res.ok && res.status !== 204) {
-              alert('Falha ao encerrar como aberto incorretamente #' + id);
-            }
-          } catch (e) {
-            console.error('[FE] Erro incorrect', e);
-            alert('Erro: ' + e.message);
-          }
+          dbg('fetch: incorrect close', { id });
+          fetch(`/dashboard/tickets/${id}/incorrect`, { method: 'POST' })
+            .then(res => {
+              dbg('fetch: incorrect response', { status: res.status, ok: res.ok });
+              if (!res.ok && res.status !== 204) {
+                alert('Falha ao encerrar como aberto incorretamente #' + id);
+              }
+            })
+            .catch(e => {
+              console.error('[FE] Erro incorrect', e);
+              alert('Erro: ' + e.message);
+            });
         }
       });
     }
