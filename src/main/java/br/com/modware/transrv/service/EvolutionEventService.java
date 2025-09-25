@@ -53,6 +53,15 @@ public class EvolutionEventService {
         Gson gson = new Gson();
         EventEvolution eventEvolution = gson.fromJson(payloadEvent, EventEvolution.class);
 
+        try {
+            if (eventEvolution != null && eventEvolution.getData() != null && eventEvolution.getData().getKey() != null) {
+                if (Boolean.TRUE.equals(eventEvolution.getData().getKey().isFromMe())) {
+                    log.debug("Ignorando evento enviado pelo próprio bot (fromMe=true) | id={}", eventEvolution.getData().getKey().getId());
+                    return;
+                }
+            }
+        } catch (Exception ignored) {}
+
             if(IsAMessageGroup(eventEvolution)) {
                 String remoteJid = eventEvolution.getData().getKey().getRemoteJid();
                 log.info("Evento de mensagem em grupo recebido | grupoId={}", remoteJid);
@@ -136,7 +145,6 @@ public class EvolutionEventService {
         String contentJson = responseOpenAi.getChoices().get(0).getMessage().getContent();
         Gson gson = new Gson();
 
-        log.info("ChatGPT content: {}", contentJson);
         AiClassifierResponse classifierResponse = gson.fromJson(contentJson, AiClassifierResponse.class);
 
         // Vincular funcionário se veio do classificador

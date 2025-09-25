@@ -30,12 +30,33 @@ public class DashboardBroadcaster {
     }
 
     public void publishUpdate() {
-        DashboardSummaryDTO data = dashboardService.getSummary();
+        DashboardSummaryDTO data;
+        try {
+            data = dashboardService.getSummary();
+        } catch (Exception ex) {
+            // Falha ao montar o resumo não deve quebrar o fluxo do backend
+            return;
+        }
+
         for (SseEmitter e : emitters) {
             try {
                 e.send(SseEmitter.event().name("update").data(data));
             } catch (IOException ex) {
-                e.complete();
+                try {
+                    e.complete();
+                } catch (Exception ignored) {}
+                emitters.remove(e);
+            } catch (IllegalStateException ex) {
+                // Pode ocorrer se a conexão SSE já foi encerrada pelo container
+                try {
+                    e.complete();
+                } catch (Exception ignored) {}
+                emitters.remove(e);
+            } catch (Exception ex) {
+                // Qualquer outra exceção não deve interromper o processamento do request atual
+                try {
+                    e.complete();
+                } catch (Exception ignored) {}
                 emitters.remove(e);
             }
         }

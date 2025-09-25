@@ -88,11 +88,13 @@ public class TicketService {
         ticket = ticketRepository.save(ticket);
 
         notifyEmployees(ticket, 1);
-        dashboardBroadcaster.publishUpdate();
 
         scheduleEscalation(ticket, 2, Duration.ofSeconds(escalationLevel2DelaySeconds));
         scheduleEscalation(ticket, 3, Duration.ofSeconds(escalationLevel3DelaySeconds));
         scheduleExpiration(ticket, Duration.ofSeconds(ticketExpirationSeconds));
+
+        // Publica atualização após agendar todos os jobs para evitar falha no fluxo em caso de erro SSE
+        dashboardBroadcaster.publishUpdate();
           
         return ticket;
     }

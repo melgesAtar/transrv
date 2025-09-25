@@ -78,6 +78,22 @@ public class WAMessageService {
                             default -> contentMessage = null;
                         }
 
+                        // Evita salvar mensagens vazias/nulas para não gerar ruído/loops
+                        if (contentMessage == null || contentMessage.isBlank()) {
+                            return waMessageRepository.findByEvolutionMessageId(eventEvolution.getData().getKey().getId())
+                                    .orElseGet(() -> {
+                                        // cria um registro mínimo apenas para deduplicação futura, sem conteúdo
+                                        WAMessage stub = new WAMessage();
+                                        stub.setWaConversation(waConversation);
+                                        stub.setEvolutionMessageId(eventEvolution.getData().getKey().getId());
+                                        stub.setSender(waContact);
+                                        stub.setMessageContent(null);
+                                        stub.setSentAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+                                        stub.setWaGroup(waGroup);
+                                        return waMessageRepository.save(stub);
+                                    });
+                        }
+
                         WAMessage newMessage = new WAMessage();
                         newMessage.setWaConversation(waConversation);
                         newMessage.setEvolutionMessageId(eventEvolution.getData().getKey().getId());
