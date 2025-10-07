@@ -22,6 +22,9 @@ public class InstanceEvolutionService {
     @Value("${evolution.api.key}")
     private String apiKey;
 
+    @Value("${app.evolution.instance-name:transRV}")
+    private String instanceName;
+
     static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Logger log = org.slf4j.LoggerFactory.getLogger(InstanceEvolutionService.class);
@@ -161,7 +164,7 @@ public class InstanceEvolutionService {
     }
 
     private boolean sendMessage(SendPlainText sendPlainText) throws IOException, InterruptedException {
-        String url = EVOLUTION_API_URL + "/message/sendText/" + "transRV";
+        String url = EVOLUTION_API_URL + "/message/sendText/" + instanceName;
 
         String json = MAPPER.writeValueAsString(sendPlainText);
 
