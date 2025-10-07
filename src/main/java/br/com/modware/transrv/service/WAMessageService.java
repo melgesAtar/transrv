@@ -428,8 +428,11 @@ public class WAMessageService {
         }
     }
 
+    public WAMessage save(WAMessage waMessage) {
+        return waMessageRepository.save(waMessage);
+    }
+
     public WAMessage saveMessage(WAMessage waMessage) {
         return waMessageRepository.save(waMessage);
-}
-
+    }
 }

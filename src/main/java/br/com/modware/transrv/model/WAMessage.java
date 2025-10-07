@@ -38,8 +38,10 @@ public class WAMessage {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
+    @Column(name="sent_at")
     private LocalDateTime sentAt;
 
+    private Boolean fromMe;
 
     @Override
     public String toString() {

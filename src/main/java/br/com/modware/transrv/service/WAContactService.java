@@ -22,4 +22,8 @@ public class WAContactService {
                     return waContactRepository.save(newContact);
                 });
     }
+
+    public WAContact save(WAContact contact) {
+        return waContactRepository.save(contact);
+    }
 }

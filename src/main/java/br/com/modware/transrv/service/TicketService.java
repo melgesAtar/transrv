@@ -130,11 +130,11 @@ public class TicketService {
         waGroup = waGroupService.save(waGroup);
 
         WAMessage waMessage = new WAMessage();
-        waMessage.setContact(waContact);
+        waMessage.setSender(waContact);
         waMessage.setWaGroup(waGroup);
         waMessage.setFromMe(false);
         waMessage.setMessageContent("Mensagem de teste para abertura de chamado");
-        waMessage.setTimestamp(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+        waMessage.setSentAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
         waMessage = waMessageService.save(waMessage);
 
         // Abrir o ticket usando o método existente
