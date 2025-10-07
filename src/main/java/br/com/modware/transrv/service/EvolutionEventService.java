@@ -107,6 +107,12 @@ public class EvolutionEventService {
                 } catch (SchedulerException e) {
                     throw new RuntimeException(e);
                 }
+            } else {
+                try {
+                    processPrivateMessage(eventEvolution);
+                } catch (SchedulerException e) {
+                    throw new RuntimeException(e);
+                }
             }
 
 
@@ -249,6 +255,60 @@ public class EvolutionEventService {
             log.info("Ticket fechado pela mensagem recebida no grupo={} por usuário={}({})",
                     WAGroup.getGroupName(), waContact.getName(), waContact.getPhoneNumber());
         }
+    }
+
+    private void processPrivateMessage(EventEvolution eventEvolution) throws SchedulerException {
+        String remoteJid = eventEvolution.getData().getKey().getRemoteJid();
+        String participant = eventEvolution.getData().getKey().getParticipant();
+
+        if (participant == null || participant.isBlank()) {
+            log.debug("Mensagem privada sem participante, ignorando | remoteJid={}", remoteJid);
+            return;
+        }
+
+        WAContact waContact = waContactService.findOrCreateWaContact(
+                participant.replace("@s.whatsapp.net", ""),
+                eventEvolution.getData().getPushName()
+        );
+
+        Employee employee = employeeRepository.findByWaContact(waContact).orElse(null);
+
+        if (employee == null) {
+            log.info("Mensagem privada de contato não funcionário, ignorando | contato={}({})",
+                    waContact.getName(), waContact.getPhoneNumber());
+            return;
+        }
+
+        log.info("Mensagem privada de funcionário recebida | funcionário={}({}) | remoteJid={}",
+                employee.getName(), employee.getWaContact().getPhoneNumber(), remoteJid);
+
+        WAConversation waConversation = waConversationService.findOrCreatePrivateConversation(waContact);
+
+        WAMessage waMessage = waMessageService.processMessage(eventEvolution, waConversation, waContact, null);
+
+        if (waMessage.getMessageContent() == null || waMessage.getMessageContent().isBlank()) {
+            log.warn("Mensagem privada de funcionário vazia, ignorando | funcionário={}({})",
+                    employee.getName(), employee.getWaContact().getPhoneNumber());
+            return;
+        }
+
+        // Tentar fechar ticket pelo privado
+        boolean closed = ticketService.tryCloseTicket(
+                eventEvolution.getData().getContextInfo() != null ? eventEvolution.getData().getContextInfo().getStanzaId() : null,
+                waMessage.getMessageContent(),
+                waContact,
+                waMessage
+        );
+
+        if (closed) {
+            log.info("Ticket fechado pela mensagem privada de funcionário | funcionário={}({}) | mensagemId={}",
+                    employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId());
+        } else {
+            log.info("Mensagem privada de funcionário não resultou em fechamento de ticket | funcionário={}({}) | mensagemId={}",
+                    employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId());
+        }
+
+        // TODO: Implementar outras ações para mensagens privadas de funcionários (ex: abrir ticket, consultar status)
     }
 
 
