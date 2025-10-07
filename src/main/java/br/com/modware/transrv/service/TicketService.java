@@ -191,9 +191,6 @@ public class TicketService {
         notifyEmployees(ticket, level);
         dashboardBroadcaster.publishUpdate();
 
-        if (level == 3) {
-            scheduleGroupLoopAlert(ticket);
-        }
     }
 
     public void expire(Long ticketId) {
@@ -207,7 +204,6 @@ public class TicketService {
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
-                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
             } catch (SchedulerException e) {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
@@ -224,7 +220,6 @@ public class TicketService {
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
-                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
             } catch (SchedulerException e) {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
@@ -245,7 +240,7 @@ public class TicketService {
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
-                scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
+             
             } catch (SchedulerException e) {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
