@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.quartz.SchedulerException;
 
 @RestController
 @RequestMapping("/dashboard")
@@ -61,6 +62,12 @@ public class DashboardController {
         dto.setEscalationLevel2Seconds(escalationLevel2DelaySeconds);
         dto.setEscalationLevel3Seconds(escalationLevel3DelaySeconds);
         return dto;
+    }
+
+    @PostMapping("/test-ticket/open")
+    public org.springframework.http.ResponseEntity<Void> openTestTicket() throws SchedulerException {
+        ticketService.openTestTicket();
+        return org.springframework.http.ResponseEntity.ok().build();
     }
 }
 

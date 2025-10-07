@@ -5,6 +5,8 @@ import br.com.modware.transrv.quartz.EscalationJob;
 import br.com.modware.transrv.quartz.ExpireTicketJob;
 import br.com.modware.transrv.repository.EmployeeAlertTermRepository;
 import br.com.modware.transrv.repository.TicketRepository;
+import br.com.modware.transrv.repository.AlertTermRepository;
+import br.com.modware.transrv.dto.dashboard.AlertNotificationDTO;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,10 @@ public class TicketService {
     private final TicketNotificationService ticketNotificationService;
 
     private final DashboardBroadcaster dashboardBroadcaster;
+    private final AlertTermRepository alertTermRepository;
+    private final WAContactService waContactService;
+    private final WAMessageService waMessageService;
+    private final WAGroupService waGroupService;
 
     // Parâmetros externos (application.properties)
     @Value("${app.escalation.level2.delay-seconds:300}")
@@ -51,7 +57,11 @@ public class TicketService {
                          InstanceEvolutionService instanceEvolutionService,
                          Scheduler scheduler,
                          TicketNotificationService ticketNotificationService,
-                         DashboardBroadcaster dashboardBroadcaster) {
+                         DashboardBroadcaster dashboardBroadcaster,
+                         AlertTermRepository alertTermRepository,
+                         WAContactService waContactService,
+                         WAMessageService waMessageService,
+                         WAGroupService waGroupService) {
         this.ticketRepository = ticketRepository;
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
@@ -59,6 +69,10 @@ public class TicketService {
         this.scheduler = scheduler;
         this.ticketNotificationService = ticketNotificationService;
         this.dashboardBroadcaster = dashboardBroadcaster;
+        this.alertTermRepository = alertTermRepository;
+        this.waContactService = waContactService;
+        this.waMessageService = waMessageService;
+        this.waGroupService = waGroupService;
     }
 
 
@@ -95,8 +109,36 @@ public class TicketService {
 
         // Publica atualização após agendar todos os jobs para evitar falha no fluxo em caso de erro SSE
         dashboardBroadcaster.publishUpdate();
-          
+        dashboardBroadcaster.publishAlert(new AlertNotificationDTO("TICKET_OPENED", ticket.getId(), 1));
         return ticket;
+    }
+
+    public Ticket openTestTicket() throws SchedulerException {
+        AlertTerm alertTerm = alertTermRepository.findById(106L)
+                .orElseThrow(() -> new RuntimeException("AlertTerm com ID 106 não encontrado."));
+
+        // Criar entidades mock para WAMessage, WAContact e WAGroup
+        WAContact waContact = new WAContact();
+        waContact.setPhoneNumber("5511999999999");
+        waContact.setName("Teste Contato");
+        waContact = waContactService.save(waContact);
+
+        WAGroup waGroup = new WAGroup();
+        waGroup.setEvolutionGroupId("1234567890@g.us");
+        waGroup.setGroupName("Grupo de Teste");
+        waGroup.setMonitored(true);
+        waGroup = waGroupService.save(waGroup);
+
+        WAMessage waMessage = new WAMessage();
+        waMessage.setContact(waContact);
+        waMessage.setWaGroup(waGroup);
+        waMessage.setFromMe(false);
+        waMessage.setMessageContent("Mensagem de teste para abertura de chamado");
+        waMessage.setTimestamp(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+        waMessage = waMessageService.save(waMessage);
+
+        // Abrir o ticket usando o método existente
+        return openTicket(waMessage, alertTerm, waContact, waGroup, null);
     }
 
 
@@ -190,7 +232,10 @@ public class TicketService {
 
         notifyEmployees(ticket, level);
         dashboardBroadcaster.publishUpdate();
-
+        
+        if (level == 3) {
+            dashboardBroadcaster.publishAlert(new AlertNotificationDTO("TICKET_ESCALATED_LEVEL_3", ticketId, level));
+        }
     }
 
     public void expire(Long ticketId) {
@@ -296,33 +341,11 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
-            scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-group-loop"));
 
             dashboardBroadcaster.publishUpdate();
             instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
-        }
-    }
-
-    private void scheduleGroupLoopAlert(Ticket ticket) {
-        try {
-            JobDetail job = JobBuilder.newJob(br.com.modware.transrv.quartz.GroupAlertLoopJob.class)
-                    .withIdentity(ticket.getId() + "-group-loop")
-                    .usingJobData("ticketId", ticket.getId())
-                    .build();
-
-            Trigger trigger = TriggerBuilder.newTrigger()
-                    .withSchedule(org.quartz.SimpleScheduleBuilder.simpleSchedule()
-                            .withIntervalInSeconds((int) groupLoopIntervalSeconds)
-                            .repeatForever()
-                            .withMisfireHandlingInstructionNowWithExistingCount())
-                    .startAt(Date.from(Instant.now().plus(Duration.ofSeconds(groupLoopInitialDelaySeconds))))
-                    .build();
-
-            scheduler.scheduleJob(job, trigger);
-        } catch (SchedulerException e) {
-            throw new RuntimeException("Erro ao agendar alerta em loop para o ticket " + ticket.getId(), e);
         }
     }
 

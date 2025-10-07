@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Painel - Chamados</title>
+  <audio id="notificationSound" src="/sounds/alert.mp3" preload="auto"></audio>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -257,8 +258,46 @@
         dbg('SSE: update received');
         renderSummary(data);
       });
+      es.addEventListener('alert', (e) => {
+        const alertData = JSON.parse(e.data);
+        dbg('SSE: alert received', alertData);
+        handleAlert(alertData);
+      });
       es.addEventListener('heartbeat', () => {});
       es.onerror = (err) => { console.error('[FE] SSE error', err); es.close(); setTimeout(startStream, 3000); };
+    }
+
+    let originalTitle = document.title;
+    let alertInterval = null;
+
+    function handleAlert(alertData) {
+        const sound = document.getElementById('notificationSound');
+        if (sound) {
+            sound.play().catch(e => console.warn('Falha ao reproduzir áudio', e));
+        }
+
+        if (alertData.type === "TICKET_OPENED") {
+            showAlertInTitle("⚠️ Novo Chamado! (#" + alertData.ticketId + ")");
+        } else if (alertData.type === "TICKET_ESCALATED_LEVEL_3") {
+            showAlertInTitle("🚨 Chamado Nível 3! (#" + alertData.ticketId + ")");
+        }
+    }
+
+    function showAlertInTitle(message) {
+        if (alertInterval) {
+            clearInterval(alertInterval);
+        }
+        let toggle = false;
+        alertInterval = setInterval(() => {
+            document.title = toggle ? message : originalTitle;
+            toggle = !toggle;
+        }, 1000);
+
+        setTimeout(() => {
+            clearInterval(alertInterval);
+            document.title = originalTitle;
+            alertInterval = null;
+        }, 10000); // 10 segundos de alerta
     }
 
     function attachTableHandlers() {

@@ -1,6 +1,7 @@
 package br.com.modware.transrv.service;
 
 import br.com.modware.transrv.dto.dashboard.DashboardSummaryDTO;
+import br.com.modware.transrv.dto.dashboard.AlertNotificationDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -54,6 +55,29 @@ public class DashboardBroadcaster {
                 emitters.remove(e);
             } catch (Exception ex) {
                 // Qualquer outra exceção não deve interromper o processamento do request atual
+                try {
+                    e.complete();
+                } catch (Exception ignored) {}
+                emitters.remove(e);
+            }
+        }
+    }
+
+    public void publishAlert(AlertNotificationDTO alert) {
+        for (SseEmitter e : emitters) {
+            try {
+                e.send(SseEmitter.event().name("alert").data(alert));
+            } catch (IOException ex) {
+                try {
+                    e.complete();
+                } catch (Exception ignored) {}
+                emitters.remove(e);
+            } catch (IllegalStateException ex) {
+                try {
+                    e.complete();
+                } catch (Exception ignored) {}
+                emitters.remove(e);
+            } catch (Exception ex) {
                 try {
                     e.complete();
                 } catch (Exception ignored) {}
