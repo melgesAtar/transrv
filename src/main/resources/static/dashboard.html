@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Painel - Chamados</title>
   <audio id="notificationSound" src="/sounds/alert.mp3" preload="auto"></audio>
+  <audio id="level3NotificationSound" src="/sounds/level3_alert.mp3" preload="auto"></audio>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -271,14 +272,18 @@
     let alertInterval = null;
 
     function handleAlert(alertData) {
-        const sound = document.getElementById('notificationSound');
-        if (sound) {
-            sound.play().catch(e => console.warn('Falha ao reproduzir áudio', e));
-        }
-
+        const openedSound = document.getElementById('notificationSound');
+        const level3Sound = document.getElementById('level3NotificationSound');
+        
         if (alertData.type === "TICKET_OPENED") {
+            if (openedSound) {
+                openedSound.play().catch(e => console.warn('Falha ao reproduzir áudio de abertura', e));
+            }
             showAlertInTitle("⚠️ Novo Chamado! (#" + alertData.ticketId + ")");
         } else if (alertData.type === "TICKET_ESCALATED_LEVEL_3") {
+            if (level3Sound) {
+                level3Sound.play().catch(e => console.warn('Falha ao reproduzir áudio de nível 3', e));
+            }
             showAlertInTitle("🚨 Chamado Nível 3! (#" + alertData.ticketId + ")");
         }
     }
