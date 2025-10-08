@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -35,6 +36,8 @@ public class TicketService {
     private final WAContactService waContactService;
     private final WAMessageService waMessageService;
     private final WAGroupService waGroupService;
+
+    private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TicketService.class);
 
     // Parâmetros externos (application.properties)
     @Value("${app.escalation.level2.delay-seconds:300}")
@@ -302,9 +305,16 @@ public class TicketService {
     public boolean tryCloseTicket(String stanzaId, String messageContent, WAContact closingContact, WAMessage closingMessage) {
         boolean closed = false;
 
-        // Novo critério de fechamento: procurar frases do tipo
-        // "ticket finalizado id 123" (variações de caixa e pontuação)
-        // Não depende de ser resposta a uma mensagem específica.
+        String contentPreview = messageContent != null
+                ? (messageContent.length() > 200 ? messageContent.substring(0, 200) + "..." : messageContent)
+                : null;
+        log.info("tryCloseTicket chamado | stanzaId={} | contact={}({}) | content={}",
+                stanzaId,
+                closingContact != null ? closingContact.getName() : null,
+                closingContact != null ? closingContact.getPhoneNumber() : null,
+                contentPreview);
+
+        // Procurar frases do tipo "ticket finalizado id 123" (variações de caixa e pontuação)
         if (messageContent != null) {
             Pattern phrasePattern = Pattern.compile(
                     "(?i)(?:ticket|chamado)\\s*finalizad[oa][\\s,:-]*.*?\\bid\\b\\s*[:\\-]?\\s*(\\d+)");
@@ -312,16 +322,32 @@ public class TicketService {
 
             if (phraseMatcher.find()) {
                 Long ticketId = Long.valueOf(phraseMatcher.group(1));
-                ticketRepository.findById(ticketId).ifPresent(ticket -> {
+                log.info("Comando de fechamento detectado | ticketId={} | origem=privado?={} | origem=grupo?={}",
+                        ticketId,
+                        closingMessage != null && closingMessage.getWaGroup() == null,
+                        closingMessage != null && closingMessage.getWaGroup() != null);
+
+                Optional<Ticket> ticketOpt = ticketRepository.findById(ticketId);
+                if (ticketOpt.isEmpty()) {
+                    log.warn("Ticket não encontrado | ticketId={}", ticketId);
+                } else {
+                    Ticket ticket = ticketOpt.get();
                     if (ticket.getStatus() == Ticket.Status.OPEN) {
+                        log.info("Ticket encontrado e OPEN, fechando | ticketId={}", ticket.getId());
                         closeTicket(ticket, closingContact, closingMessage);
+                        closed = true;
+                    } else {
+                        log.info("Ticket encontrado porém status != OPEN | ticketId={} | status={}", ticket.getId(), ticket.getStatus());
                     }
-                });
-                closed = true;
+                }
+            } else {
+                log.debug("Nenhum padrão de fechamento detectado na mensagem");
             }
+        } else {
+            log.debug("Mensagem nula recebida em tryCloseTicket");
         }
 
-
+        log.info("tryCloseTicket finalizado | closed={}", closed);
         return closed;
     }
 

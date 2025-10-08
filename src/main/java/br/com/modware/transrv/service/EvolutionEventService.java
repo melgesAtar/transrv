@@ -261,9 +261,27 @@ public class EvolutionEventService {
         String remoteJid = eventEvolution.getData().getKey().getRemoteJid();
         String participant = eventEvolution.getData().getKey().getParticipant();
 
+        log.info("processPrivateMessage | remoteJid={} | participant={} | messageType={} | pushName={} | stanzaId={}",
+                remoteJid,
+                participant,
+                eventEvolution.getData() != null ? eventEvolution.getData().getMessageType() : null,
+                eventEvolution.getData() != null ? eventEvolution.getData().getPushName() : null,
+                eventEvolution.getData() != null && eventEvolution.getData().getKey() != null ? eventEvolution.getData().getKey().getId() : null);
+
         if (participant == null || participant.isBlank()) {
-            log.debug("Mensagem privada sem participante, ignorando | remoteJid={}", remoteJid);
-            return;
+            log.warn("Mensagem privada sem participant no payload, tentando extrair do remoteJid | remoteJid={}", remoteJid);
+            try {
+                if (remoteJid != null && remoteJid.endsWith("@s.whatsapp.net")) {
+                    participant = remoteJid;
+                    log.info("Participant inferido a partir de remoteJid | participant={} | remoteJid={} ", participant, remoteJid);
+                }
+            } catch (Exception e) {
+                log.error("Falha ao inferir participant do remoteJid | remoteJid={} erro={}", remoteJid, e.getMessage());
+            }
+            if (participant == null || participant.isBlank()) {
+                log.debug("Mensagem privada sem participante, ignorando | remoteJid={}", remoteJid);
+                return;
+            }
         }
 
         WAContact waContact = waContactService.findOrCreateWaContact(
@@ -285,6 +303,11 @@ public class EvolutionEventService {
         WAConversation waConversation = waConversationService.findOrCreatePrivateConversation(waContact);
 
         WAMessage waMessage = waMessageService.processMessage(eventEvolution, waConversation, waContact, null);
+        log.info("Mensagem privada processada | messageId={} | contentLen={} | fromMe?={} | timestamp={}",
+                waMessage != null ? waMessage.getId() : null,
+                waMessage != null && waMessage.getMessageContent() != null ? waMessage.getMessageContent().length() : 0,
+                waMessage != null && Boolean.TRUE.equals(waMessage.getFromMe()),
+                waMessage != null ? waMessage.getSentAt() : null);
 
         if (waMessage.getMessageContent() == null || waMessage.getMessageContent().isBlank()) {
             log.warn("Mensagem privada de funcionário vazia, ignorando | funcionário={}({})",
@@ -304,11 +327,11 @@ public class EvolutionEventService {
             log.info("Ticket fechado pela mensagem privada de funcionário | funcionário={}({}) | mensagemId={}",
                     employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId());
         } else {
-            log.info("Mensagem privada de funcionário não resultou em fechamento de ticket | funcionário={}({}) | mensagemId={}",
-                    employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId());
+            log.info("Mensagem privada de funcionário não resultou em fechamento de ticket | funcionário={}({}) | mensagemId={} | content='{}'",
+                    employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId(),
+                    waMessage.getMessageContent() != null ? (waMessage.getMessageContent().length() > 200 ? waMessage.getMessageContent().substring(0,200) + "..." : waMessage.getMessageContent()) : null);
         }
 
-        // TODO: Implementar outras ações para mensagens privadas de funcionários (ex: abrir ticket, consultar status)
     }
 
 
