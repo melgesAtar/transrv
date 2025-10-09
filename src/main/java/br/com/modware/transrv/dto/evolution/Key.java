@@ -8,4 +8,5 @@ public class Key {
     private boolean fromMe;
     private String id;
     private String participant;
+    private String participantAlt;
 }

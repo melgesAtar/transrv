@@ -11,7 +11,8 @@ public class ImageMessage {
     private String fileLength;
     private Integer height;
     private Integer width;
-    private String mediaKey;
+    // mediaKey pode vir como string ou objeto
+    private JsonElement mediaKey;
     private JsonElement fileEncSha256;
     private String directPath;
     private String mediaKeyTimestamp;

@@ -132,7 +132,8 @@ public class EvolutionEventService {
         }
 
         WAContact waContact = waContactService.findOrCreateWaContact(
-                eventEvolution.getData().getKey().getParticipant().replace("@s.whatsapp.net", ""),
+                eventEvolution.getData().getKey().getParticipantAlt()
+                        .replaceAll("[:@].*", ""),
                 eventEvolution.getData().getPushName()
         );
 
