@@ -35,6 +35,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     @Query("select count(t) from Ticket t where t.createdAt >= :start")
     long countCreatedSince(@org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start);
 
+    @Query("select t from Ticket t left join fetch t.waGroup left join fetch t.alertTerm left join fetch t.messageResponsibleForOpeningTheCall order by t.createdAt desc")
     java.util.List<Ticket> findTop20ByOrderByCreatedAtDesc();
 
     @Query("select count(t) from Ticket t where t.status = :status and t.closedAt >= :start")

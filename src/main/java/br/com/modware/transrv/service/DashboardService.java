@@ -4,6 +4,7 @@ import br.com.modware.transrv.dto.dashboard.DashboardSummaryDTO;
 import br.com.modware.transrv.model.Ticket;
 import br.com.modware.transrv.repository.TicketRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,6 +18,7 @@ public class DashboardService {
         this.ticketRepository = ticketRepository;
     }
 
+    @Transactional(readOnly = true)
     public DashboardSummaryDTO getSummary() {
         DashboardSummaryDTO s = new DashboardSummaryDTO();
         java.time.ZoneId zone = java.time.ZoneId.of("America/Sao_Paulo");

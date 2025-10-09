@@ -22,6 +22,9 @@ public interface EmployeeWAContactRepository extends JpaRepository<EmployeeWACon
 
     @Query("select distinct w.waContact.phoneNumber from EmployeeWAContact w where w.employee.id = :employeeId and w.waContact.phoneNumber is not null")
     List<String> findDistinctPhoneNumbersByEmployeeId(@Param("employeeId") Long employeeId);
+
+    @Query("select w from EmployeeWAContact w join fetch w.waContact where w.employee in :employees and w.waContact.phoneNumber is not null")
+    List<EmployeeWAContact> findWithContactByEmployeeIn(@Param("employees") Collection<Employee> employees);
 }
 
 

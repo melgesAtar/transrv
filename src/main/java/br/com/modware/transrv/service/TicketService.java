@@ -148,6 +148,7 @@ public class TicketService {
     }
 
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     private void notifyEmployees(Ticket ticket, int level) {
 
         List<Employee> employees = employeeAlertTermRepository
@@ -159,7 +160,7 @@ public class TicketService {
         Ticket savedTicket = ticketRepository.save(ticket);
 
         // Agrupar por telefone via tabela de ligação EmployeeWAContact
-        java.util.List<br.com.modware.transrv.model.EmployeeWAContact> links = employeeWAContactRepository.findByEmployeeIn(employees);
+        java.util.List<br.com.modware.transrv.model.EmployeeWAContact> links = employeeWAContactRepository.findWithContactByEmployeeIn(employees);
 
         Map<String, List<Employee>> employeesByPhone = links.stream()
                 .filter(l -> l.getWaContact() != null && l.getWaContact().getPhoneNumber() != null)
