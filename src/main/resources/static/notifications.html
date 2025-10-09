@@ -34,7 +34,7 @@
     const CANDIDATE_BASES = (window.location && window.location.port === '5500') ? ['', 'http://localhost:8080'] : [''];
 
     async function fetchFromBase(baseUrl) {
-      const res = await fetch(`${baseUrl}/notifications`, { headers: { 'Accept': 'application/json' } });
+      const res = await fetch(`${baseUrl}/api/notifications`, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) {
         throw new Error(`Falha ao buscar notificações: ${res.status} ${res.statusText}`);
       }
@@ -83,7 +83,7 @@
 
       const open = () => {
         const base = CANDIDATE_BASES[index] || '';
-        es = new EventSource(`${base}/notifications/stream`);
+        es = new EventSource(`${base}/api/notifications/stream`);
         es.addEventListener('update', (e) => {
           try {
             const data = JSON.parse(e.data);
