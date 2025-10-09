@@ -8,8 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png?v=1">
   <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png?v=1">
   <link rel="manifest" href="favicon_io/site.webmanifest">
-  <link rel="icon" href="favicon_io/favicon.ico?v=1" type="image/x-icon">
-  <link rel="shortcut icon" href="favicon.ico?v=1">
+  <link rel="icon" href="/favicon_io/favicon.ico?v=1" type="image/x-icon">
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
     .nav { display:flex; gap:12px; align-items:center; padding:10px 12px; border:1px solid #e5e7eb; border-radius: 10px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); margin-bottom: 14px; }
@@ -28,7 +27,7 @@
   </style>
   <script>
     async function fetchNotifications() {
-      const res = await fetch('notifications');
+      const res = await fetch('/notifications');
       return res.json();
     }
 
@@ -43,7 +42,7 @@
           <td>${n.groupName || '-'}</td>
           <td>${n.alertCode || '-'}</td>
           <td>${n.employeeName || '-'}</td>
-          <td>${n.employeePhone || '-'}</td>
+          <td>${(Array.isArray(n.employeePhones) && n.employeePhones.length) ? n.employeePhones.join(', ') : '-'}</td>
           <td>Nível ${n.escalationLevel}</td>
           <td>${(n.notifiedAt || '').toString().replace('T',' ') || '-'}</td>
         `;
@@ -52,7 +51,7 @@
     }
 
     function startStream() {
-      const es = new EventSource('notifications/stream');
+      const es = new EventSource('/notifications/stream');
       es.addEventListener('update', (e) => {
         const data = JSON.parse(e.data);
         render(data);

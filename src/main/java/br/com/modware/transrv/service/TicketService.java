@@ -30,6 +30,7 @@ public class TicketService {
     private final InstanceEvolutionService instanceEvolutionService;
     private final Scheduler scheduler;
     private final TicketNotificationService ticketNotificationService;
+    private final br.com.modware.transrv.repository.EmployeeWAContactRepository employeeWAContactRepository;
 
     private final DashboardBroadcaster dashboardBroadcaster;
     private final AlertTermRepository alertTermRepository;
@@ -64,7 +65,8 @@ public class TicketService {
                          AlertTermRepository alertTermRepository,
                          WAContactService waContactService,
                          WAMessageService waMessageService,
-                         WAGroupService waGroupService) {
+                         WAGroupService waGroupService,
+                         br.com.modware.transrv.repository.EmployeeWAContactRepository employeeWAContactRepository) {
         this.ticketRepository = ticketRepository;
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
@@ -76,6 +78,7 @@ public class TicketService {
         this.waContactService = waContactService;
         this.waMessageService = waMessageService;
         this.waGroupService = waGroupService;
+        this.employeeWAContactRepository = employeeWAContactRepository;
     }
 
 
@@ -155,8 +158,13 @@ public class TicketService {
         
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        Map<String, List<Employee>> employeesByPhone = employees.stream()
-                .collect(Collectors.groupingBy(e -> e.getWaContact().getPhoneNumber()));
+        // Agrupar por telefone via tabela de ligação EmployeeWAContact
+        java.util.List<br.com.modware.transrv.model.EmployeeWAContact> links = employeeWAContactRepository.findByEmployeeIn(employees);
+
+        Map<String, List<Employee>> employeesByPhone = links.stream()
+                .filter(l -> l.getWaContact() != null && l.getWaContact().getPhoneNumber() != null)
+                .collect(Collectors.groupingBy(l -> l.getWaContact().getPhoneNumber(),
+                        Collectors.mapping(br.com.modware.transrv.model.EmployeeWAContact::getEmployee, Collectors.toList())));
 
         for (Map.Entry<String, List<Employee>> entry : employeesByPhone.entrySet()) {
             String phone = entry.getKey();

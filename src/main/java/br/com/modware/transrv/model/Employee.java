@@ -17,11 +17,6 @@ public class Employee {
     @Getter
     private String name;
 
-    @OneToOne
-    @JoinColumn(name = "wa_contact_id")
-    @Getter
-    private WAContact waContact;
-
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;

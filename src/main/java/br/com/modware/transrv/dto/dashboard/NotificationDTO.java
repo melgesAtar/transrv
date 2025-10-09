@@ -8,7 +8,7 @@ public class NotificationDTO {
     private String groupName;
     private String alertCode;
     private String employeeName;
-    private String employeePhone;
+    private java.util.List<String> employeePhones;
     private int escalationLevel;
     private LocalDateTime notifiedAt;
 
@@ -22,8 +22,8 @@ public class NotificationDTO {
     public void setAlertCode(String alertCode) { this.alertCode = alertCode; }
     public String getEmployeeName() { return employeeName; }
     public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
-    public String getEmployeePhone() { return employeePhone; }
-    public void setEmployeePhone(String employeePhone) { this.employeePhone = employeePhone; }
+    public java.util.List<String> getEmployeePhones() { return employeePhones; }
+    public void setEmployeePhones(java.util.List<String> employeePhones) { this.employeePhones = employeePhones; }
     public int getEscalationLevel() { return escalationLevel; }
     public void setEscalationLevel(int escalationLevel) { this.escalationLevel = escalationLevel; }
     public LocalDateTime getNotifiedAt() { return notifiedAt; }

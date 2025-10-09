@@ -162,7 +162,7 @@ public class EvolutionEventService {
             log.info("AI sugeriu employee='{}' para telefone {} (contato: {} - {})",
                     employeeName, phone, waContact.getName(), waContact.getId());
             // Primeiro: match direto por telefone + nome (ignore case)
-            java.util.List<Employee> directMatches = employeeRepository.findByWaContact_PhoneNumberAndNameIgnoreCase(phone, employeeName);
+            java.util.List<Employee> directMatches = employeeRepository.findByLinkedPhoneAndName(phone, employeeName);
             if (directMatches != null && !directMatches.isEmpty()) {
                 log.info("Match direto telefone+nome encontrou {} funcionário(s): {}",
                         directMatches.size(),
@@ -170,7 +170,7 @@ public class EvolutionEventService {
                 resolvedEmployee = directMatches.get(0);
             } else {
                 // Fallback: buscar por telefone e tentar resolver desambiguação
-                java.util.List<Employee> byPhone = employeeRepository.findByWaContact_PhoneNumber(phone);
+                java.util.List<Employee> byPhone = employeeRepository.findByLinkedPhone(phone);
                 if (byPhone != null && !byPhone.isEmpty()) {
                     log.info("Busca por telefone encontrou {} funcionário(s) para {}: {}",
                             byPhone.size(), phone,
@@ -290,7 +290,7 @@ public class EvolutionEventService {
                 eventEvolution.getData().getPushName()
         );
 
-        Employee employee = employeeRepository.findByWaContact(waContact).orElse(null);
+        Employee employee = employeeRepository.findByLinkedWAContact(waContact).orElse(null);
 
         if (employee == null) {
             log.info("Mensagem privada de contato não funcionário, ignorando | contato={}({})",
@@ -299,7 +299,7 @@ public class EvolutionEventService {
         }
 
         log.info("Mensagem privada de funcionário recebida | funcionário={}({}) | remoteJid={}",
-                employee.getName(), employee.getWaContact().getPhoneNumber(), remoteJid);
+                employee.getName(), employee.getId(), remoteJid);
 
         WAConversation waConversation = waConversationService.findOrCreatePrivateConversation(waContact);
 
@@ -311,8 +311,8 @@ public class EvolutionEventService {
                 waMessage != null ? waMessage.getSentAt() : null);
 
         if (waMessage.getMessageContent() == null || waMessage.getMessageContent().isBlank()) {
-            log.warn("Mensagem privada de funcionário vazia, ignorando | funcionário={}({})",
-                    employee.getName(), employee.getWaContact().getPhoneNumber());
+            log.warn("Mensagem privada de funcionário vazia, ignorando | funcionário={} (id={})",
+                    employee.getName(), employee.getId());
             return;
         }
 
@@ -325,11 +325,11 @@ public class EvolutionEventService {
         );
 
         if (closed) {
-            log.info("Ticket fechado pela mensagem privada de funcionário | funcionário={}({}) | mensagemId={}",
-                    employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId());
+            log.info("Ticket fechado pela mensagem privada de funcionário | funcionário={} (id={}) | mensagemId={}",
+                    employee.getName(), employee.getId(), waMessage.getId());
         } else {
-            log.info("Mensagem privada de funcionário não resultou em fechamento de ticket | funcionário={}({}) | mensagemId={} | content='{}'",
-                    employee.getName(), employee.getWaContact().getPhoneNumber(), waMessage.getId(),
+            log.info("Mensagem privada de funcionário não resultou em fechamento de ticket | funcionário={} (id={}) | mensagemId={} | content='{}'",
+                    employee.getName(), employee.getId(), waMessage.getId(),
                     waMessage.getMessageContent() != null ? (waMessage.getMessageContent().length() > 200 ? waMessage.getMessageContent().substring(0,200) + "..." : waMessage.getMessageContent()) : null);
         }
 

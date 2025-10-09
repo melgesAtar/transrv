@@ -2,6 +2,8 @@ package br.com.modware.transrv.repository;
 
 import br.com.modware.transrv.model.Employee;
 import br.com.modware.transrv.model.WAContact;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,8 +12,12 @@ import java.util.Optional;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
-    List<Employee> findByWaContact_PhoneNumber(String phoneNumber);
-    List<Employee> findByWaContact_PhoneNumberAndNameIgnoreCase(String phoneNumber, String name);
+    @Query("select e from Employee e join EmployeeWAContact lw on lw.employee = e where lw.waContact.phoneNumber = :phone")
+    List<Employee> findByLinkedPhone(@Param("phone") String phoneNumber);
 
-    Optional<Employee> findByWaContact(WAContact waContact);
+    @Query("select e from Employee e join EmployeeWAContact lw on lw.employee = e where lower(e.name) = lower(:name) and lw.waContact.phoneNumber = :phone")
+    List<Employee> findByLinkedPhoneAndName(@Param("phone") String phoneNumber, @Param("name") String name);
+
+    @Query("select e from Employee e join EmployeeWAContact lw on lw.employee = e where lw.waContact = :waContact")
+    Optional<Employee> findByLinkedWAContact(@Param("waContact") WAContact waContact);
 }
