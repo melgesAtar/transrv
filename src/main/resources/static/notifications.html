@@ -26,9 +26,36 @@
     table { min-width: 960px; }
   </style>
   <script>
-    async function fetchNotifications() {
-      const res = await fetch('/notifications');
+    // Redireciona para o backend se a página estiver sendo servida pelo Live Server (porta 5500)
+    if (window.location && window.location.port === '5500') {
+      window.location.replace('http://localhost:8080/notifications');
+    }
+
+    const CANDIDATE_BASES = (window.location && window.location.port === '5500') ? ['', 'http://localhost:8080'] : [''];
+
+    async function fetchFromBase(baseUrl) {
+      const res = await fetch(`${baseUrl}/notifications`, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) {
+        throw new Error(`Falha ao buscar notificações: ${res.status} ${res.statusText}`);
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Resposta não JSON recebida de ${baseUrl || '/'} (Content-Type: ${contentType})`);
+      }
       return res.json();
+    }
+
+    async function fetchNotifications() {
+      let lastError;
+      for (const base of CANDIDATE_BASES) {
+        try {
+          return await fetchFromBase(base);
+        } catch (err) {
+          lastError = err;
+          // Tenta próximo baseUrl
+        }
+      }
+      throw lastError || new Error('Falha ao obter notificações');
     }
 
     function render(list) {
@@ -51,17 +78,42 @@
     }
 
     function startStream() {
-      const es = new EventSource('/notifications/stream');
-      es.addEventListener('update', (e) => {
-        const data = JSON.parse(e.data);
-        render(data);
-      });
-      es.addEventListener('heartbeat', () => {});
-      es.onerror = () => { es.close(); setTimeout(startStream, 3000); };
+      let index = 0;
+      let es;
+
+      const open = () => {
+        const base = CANDIDATE_BASES[index] || '';
+        es = new EventSource(`${base}/notifications/stream`);
+        es.addEventListener('update', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            render(data);
+          } catch (parseErr) {
+            console.error('Falha ao parsear dados do stream:', parseErr);
+          }
+        });
+        es.addEventListener('heartbeat', () => {});
+        es.onerror = () => {
+          es.close();
+          if (index + 1 < CANDIDATE_BASES.length) {
+            index += 1;
+            open();
+          } else {
+            setTimeout(open, 3000);
+          }
+        };
+      };
+
+      open();
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      render(await fetchNotifications());
+      try {
+        const data = await fetchNotifications();
+        render(data);
+      } catch (err) {
+        console.error(err);
+      }
       startStream();
     });
   </script>
