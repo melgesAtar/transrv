@@ -148,7 +148,7 @@ public class TicketService {
     }
 
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional
     private void notifyEmployees(Ticket ticket, int level) {
 
         List<Employee> employees = employeeAlertTermRepository
