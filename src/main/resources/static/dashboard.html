@@ -196,6 +196,13 @@
     function renderSummary(s) {
       lastSummary = s;
       dbg('renderSummary: counts', { open: s.open, closed: s.closed, recent: (s.recent||[]).length });
+      // Níveis
+      const lvl1 = document.getElementById('openLevel1');
+      const lvl2 = document.getElementById('openLevel2');
+      const lvl3 = document.getElementById('openLevel3');
+      if (lvl1) lvl1.textContent = (typeof s.openLevel1 === 'number') ? s.openLevel1 : '-';
+      if (lvl2) lvl2.textContent = (typeof s.openLevel2 === 'number') ? s.openLevel2 : '-';
+      if (lvl3) lvl3.textContent = (typeof s.openLevel3 === 'number') ? s.openLevel3 : '-';
       document.getElementById('open').textContent = s.open;
       document.getElementById('closed').textContent = s.closed;
       // removido campo "abertos hoje" do dashboard
@@ -407,6 +414,9 @@
   <div id="app" style="display:none;">
   <h1 style="margin-bottom:10px;">Acompanhamento de Chamados</h1>
   <div class="cards">
+    <div class="card" style="border-color:#facc15;"><div class="muted">Nível 1 (Amarelo)</div><div class="value" id="openLevel1">-</div></div>
+    <div class="card" style="border-color:#fb923c;"><div class="muted">Nível 2 (Laranja)</div><div class="value" id="openLevel2">-</div></div>
+    <div class="card" style="border-color:#ef4444;"><div class="muted">Nível 3 (Vermelho)</div><div class="value" id="openLevel3">-</div></div>
     <div class="card"><div class="muted">Abertos (últimas 24h)</div><div class="value" id="open">-</div></div>
     <div class="card"><div class="muted">Fechados (últimas 24h)</div><div class="value" id="closed">-</div></div>
   </div>

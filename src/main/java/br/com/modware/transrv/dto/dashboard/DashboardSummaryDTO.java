@@ -11,6 +11,10 @@ public class DashboardSummaryDTO {
     private long closed;
     private long closedWithoutSolution;
     private long openedToday;
+    // Contadores de chamados ABERTOS por nível de escalonamento atual
+    private long openLevel1;
+    private long openLevel2;
+    private long openLevel3;
     private List<RecentTicketDTO> recent;
 
     @Data

@@ -272,7 +272,6 @@ public class TicketService {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
             dashboardBroadcaster.publishUpdate();
-            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         }
         return ticket;
     }
@@ -293,7 +292,6 @@ public class TicketService {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
             dashboardBroadcaster.publishUpdate();
-            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         }
         return ticket;
     }
@@ -369,7 +367,6 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
 
             dashboardBroadcaster.publishUpdate();
-            instanceEvolutionService.sendFinalizationToGroup(ticket.getWaGroup(), ticket);
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }

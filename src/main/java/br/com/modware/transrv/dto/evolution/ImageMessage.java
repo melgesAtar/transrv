@@ -1,18 +1,21 @@
 package br.com.modware.transrv.dto.evolution;
 
+import com.google.gson.JsonElement;
+
 public class ImageMessage {
     private String url;
     private String mimeType;
     private String caption;
-    private String fileSha256;
+    // Alguns provedores enviam sha/enc sha/thumbnail como objeto em vez de string
+    private JsonElement fileSha256;
     private String fileLength;
     private Integer height;
     private Integer width;
     private String mediaKey;
-    private String fileEncSha256;
+    private JsonElement fileEncSha256;
     private String directPath;
     private String mediaKeyTimestamp;
-    private String jpegThumbnail;
+    private JsonElement jpegThumbnail;
 
 
     public String getMimetype() {

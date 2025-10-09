@@ -29,6 +29,23 @@ public class DashboardService {
         s.setOpenedToday(ticketRepository.countCreatedSince(startOfDay));
 
         List<Ticket> recent = ticketRepository.findTop20ByOrderByCreatedAtDesc();
+        // Contadores por nível (apenas tickets Abertos)
+        long level1 = 0;
+        long level2 = 0;
+        long level3 = 0;
+        for (Ticket t : recent) {
+            if (t.getStatus() == Ticket.Status.OPEN) {
+                Integer lvl = t.getCurrentEscalationLevel();
+                if (lvl != null) {
+                    if (lvl == 1) level1++;
+                    else if (lvl == 2) level2++;
+                    else if (lvl >= 3) level3++;
+                }
+            }
+        }
+        s.setOpenLevel1(level1);
+        s.setOpenLevel2(level2);
+        s.setOpenLevel3(level3);
         List<DashboardSummaryDTO.RecentTicketDTO> mapped = recent.stream().map(t -> {
             DashboardSummaryDTO.RecentTicketDTO dto = new DashboardSummaryDTO.RecentTicketDTO();
             dto.setId(t.getId());
