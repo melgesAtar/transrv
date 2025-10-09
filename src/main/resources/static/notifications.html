@@ -28,7 +28,7 @@
   </style>
   <script>
     async function fetchNotifications() {
-      const res = await fetch('/notifications');
+      const res = await fetch('notifications');
       return res.json();
     }
 
@@ -52,7 +52,7 @@
     }
 
     function startStream() {
-      const es = new EventSource('/notifications/stream');
+      const es = new EventSource('notifications/stream');
       es.addEventListener('update', (e) => {
         const data = JSON.parse(e.data);
         render(data);
@@ -68,12 +68,6 @@
   </script>
   </head>
 <body>
-  <div class="nav" role="navigation" aria-label="Navegação principal">
-    <span class="brand">TransRV</span>
-    <a href="/dashboard.html">Dashboard</a>
-    <a href="/notifications.html" aria-current="page">Notificações</a>
-    <a class="external" href="https://lookerstudio.google.com/reporting/75bac0ca-74ca-4f2b-9e7d-b83a6a9c3fd0" target="_blank" rel="noopener">Relatório (Looker Studio)</a>
-  </div>
   <div class="nav" role="navigation" aria-label="Navegação principal">
     <span class="brand"><img src="assets/logo-transrv-transparente.png?v=1" alt="TransRV" style="height:24px;"> TransRV</span>
     <a href="dashboard.html">Dashboard</a>
