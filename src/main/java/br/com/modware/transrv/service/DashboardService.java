@@ -30,7 +30,7 @@ public class DashboardService {
         java.time.LocalDateTime startOfDay = today.atStartOfDay(zone).toLocalDateTime();
         s.setOpenedToday(ticketRepository.countCreatedSince(startOfDay));
 
-        List<Ticket> recent = ticketRepository.findTop20ByOrderByCreatedAtDesc();
+        List<Ticket> recent = ticketRepository.findRecent(org.springframework.data.domain.PageRequest.of(0, 20));
         // Contadores por nível (apenas tickets Abertos)
         long level1 = 0;
         long level2 = 0;
