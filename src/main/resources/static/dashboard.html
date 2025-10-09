@@ -4,14 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Painel - Chamados</title>
-  <audio id="notificationSound" src="/sounds/alert.mp3" preload="auto"></audio>
-  <audio id="level3NotificationSound" src="/sounds/level3_alert.mp3" preload="auto"></audio>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png?v=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png?v=1">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png?v=1">
+  <link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="icon" href="favicon_io/favicon.ico?v=1" type="image/x-icon">
+  <audio id="notificationSound" src="sounds/alert.mp3" preload="auto"></audio>
+  <audio id="level3NotificationSound" src="sounds/level3_alert.mp3" preload="auto"></audio>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
     .nav { display:flex; gap:12px; align-items:center; padding:10px 12px; border:1px solid #e5e7eb; border-radius: 10px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); margin-bottom: 14px; }
     .nav a { text-decoration:none; color:#111; padding:6px 10px; border-radius:8px; }
     .nav a:hover { background:#f3f4f6; }
-    .nav .brand { font-weight:700; margin-right:auto; }
+    .nav .brand { display:flex; align-items:center; gap:8px; font-weight:700; margin-right:auto; }
     .nav .external { color:#2563eb; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 20px; }
     .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
@@ -191,11 +196,28 @@
       return el ? el.value : 'ALL';
     }
 
+    function getCurrentLevelFilter() {
+      const el = document.getElementById('levelFilter');
+      return el ? el.value : 'ALL';
+    }
+
     function filterTickets(list, filter) {
       if (!Array.isArray(list)) return [];
       if (filter === 'OPEN') return list.filter(t => t.status === 'OPEN');
       if (filter === 'CLOSED') return list.filter(t => t.status && t.status !== 'OPEN');
       return list;
+    }
+
+    function filterByLevel(list, levelFilter) {
+      if (!Array.isArray(list)) return [];
+      if (levelFilter === 'ALL') return list;
+      const lvl = Number(levelFilter);
+      if (!Number.isFinite(lvl)) return list;
+      if (lvl === 3) {
+        // nível 3 representa topo (>=3)
+        return list.filter(t => (t.currentEscalationLevel || 0) >= 3);
+      }
+      return list.filter(t => (t.currentEscalationLevel || 0) === lvl);
     }
 
     function renderSummary(s) {
@@ -215,8 +237,10 @@
       const tbody = document.getElementById('recent');
       tbody.innerHTML = '';
       const currentFilter = getCurrentFilter();
-      const filtered = filterTickets((s.recent || []), currentFilter);
-      dbg('renderSummary: filter', currentFilter, '=> rows', filtered.length);
+      const levelFilter = getCurrentLevelFilter();
+      let filtered = filterTickets((s.recent || []), currentFilter);
+      filtered = filterByLevel(filtered, levelFilter);
+      dbg('renderSummary: filter', currentFilter, 'level', levelFilter, '=> rows', filtered.length);
       for (const t of filtered) {
         const tr = document.createElement('tr');
         const createdMs = normalizeToMs(t.createdAt);
@@ -365,10 +389,12 @@
 
     function setupFilter() {
       const filterEl = document.getElementById('statusFilter');
+      const levelEl = document.getElementById('levelFilter');
       if (filterEl) {
-        filterEl.addEventListener('change', () => {
-          if (lastSummary) renderSummary(lastSummary);
-        });
+        filterEl.addEventListener('change', () => { if (lastSummary) renderSummary(lastSummary); });
+      }
+      if (levelEl) {
+        levelEl.addEventListener('change', () => { if (lastSummary) renderSummary(lastSummary); });
       }
     }
 
@@ -418,9 +444,9 @@
 
   <div id="app" style="display:none;">
   <div class="nav" role="navigation" aria-label="Navegação principal">
-    <span class="brand">TransRV</span>
-    <a href="/dashboard.html" aria-current="page">Dashboard</a>
-    <a href="/notifications.html">Notificações</a>
+    <span class="brand"><img src="assets/logo-transrv-transparente.png?v=1" alt="TransRV" style="height:24px;"> TransRV</span>
+    <a href="dashboard.html" aria-current="page">Dashboard</a>
+    <a href="notifications">Notificações</a>
     <a class="external" href="https://lookerstudio.google.com/reporting/75bac0ca-74ca-4f2b-9e7d-b83a6a9c3fd0" target="_blank" rel="noopener">Relatório (Looker Studio)</a>
   </div>
   <h1 style="margin-bottom:10px;">Acompanhamento de Chamados</h1>
@@ -436,11 +462,18 @@
     <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 8px;">
       <div class="muted">Últimos 20</div>
       <div>
-        <label for="statusFilter" class="muted" style="margin-right:8px;">Filtrar</label>
+        <label for="statusFilter" class="muted" style="margin-right:8px;">Status</label>
         <select id="statusFilter" aria-label="Filtrar por status">
           <option value="ALL">Todos</option>
           <option value="OPEN">Abertos</option>
           <option value="CLOSED">Fechados</option>
+        </select>
+        <label for="levelFilter" class="muted" style="margin-left:8px; margin-right:8px;">Nível</label>
+        <select id="levelFilter" aria-label="Filtrar por nível de escalonamento">
+          <option value="ALL">Todos</option>
+          <option value="1">Nível 1</option>
+          <option value="2">Nível 2</option>
+          <option value="3">Nível 3</option>
         </select>
       </div>
     </div>

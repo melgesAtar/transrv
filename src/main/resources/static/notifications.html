@@ -4,12 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Painel - Notificações</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png?v=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png?v=1">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png?v=1">
+  <link rel="manifest" href="favicon_io/site.webmanifest">
+  <link rel="icon" href="favicon_io/favicon.ico?v=1" type="image/x-icon">
+  <link rel="shortcut icon" href="favicon.ico?v=1">
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; color: #111; }
     .nav { display:flex; gap:12px; align-items:center; padding:10px 12px; border:1px solid #e5e7eb; border-radius: 10px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); margin-bottom: 14px; }
     .nav a { text-decoration:none; color:#111; padding:6px 10px; border-radius:8px; }
     .nav a:hover { background:#f3f4f6; }
-    .nav .brand { font-weight:700; margin-right:auto; }
+    .nav .brand { display:flex; align-items:center; gap:8px; font-weight:700; margin-right:auto; }
     .nav .external { color:#2563eb; }
     .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
     .muted { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
@@ -66,6 +72,12 @@
     <span class="brand">TransRV</span>
     <a href="/dashboard.html">Dashboard</a>
     <a href="/notifications.html" aria-current="page">Notificações</a>
+    <a class="external" href="https://lookerstudio.google.com/reporting/75bac0ca-74ca-4f2b-9e7d-b83a6a9c3fd0" target="_blank" rel="noopener">Relatório (Looker Studio)</a>
+  </div>
+  <div class="nav" role="navigation" aria-label="Navegação principal">
+    <span class="brand"><img src="assets/logo-transrv-transparente.png?v=1" alt="TransRV" style="height:24px;"> TransRV</span>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="notifications" aria-current="page">Notificações</a>
     <a class="external" href="https://lookerstudio.google.com/reporting/75bac0ca-74ca-4f2b-9e7d-b83a6a9c3fd0" target="_blank" rel="noopener">Relatório (Looker Studio)</a>
   </div>
   <h1 style="margin-bottom:10px;">Acompanhamento de Notificações</h1>
