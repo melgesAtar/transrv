@@ -4,6 +4,7 @@ import br.com.modware.transrv.dto.dashboard.NotificationDTO;
 import br.com.modware.transrv.model.TicketNotification;
 import br.com.modware.transrv.repository.TicketNotificationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ public class NotificationsService {
         this.employeeWAContactRepository = employeeWAContactRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<NotificationDTO> getRecent() {
         return repository.findTop50ByOrderByNotifiedAtDesc().stream().map(this::map).collect(Collectors.toList());
     }
@@ -33,11 +35,7 @@ public class NotificationsService {
         dto.setEmployeeName(tn.getEmployee() != null ? tn.getEmployee().getName() : null);
         // Employee pode ter múltiplos WAContacts; coletar todos os números
         if (tn.getEmployee() != null) {
-            java.util.List<String> phones = employeeWAContactRepository.findByEmployee(tn.getEmployee()).stream()
-                    .filter(l -> l.getWaContact() != null && l.getWaContact().getPhoneNumber() != null)
-                    .map(l -> l.getWaContact().getPhoneNumber())
-                    .distinct()
-                    .collect(java.util.stream.Collectors.toList());
+            java.util.List<String> phones = employeeWAContactRepository.findDistinctPhoneNumbersByEmployeeId(tn.getEmployee().getId());
             dto.setEmployeePhones(phones);
         }
         dto.setEscalationLevel(tn.getEscalationLevel());
