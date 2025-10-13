@@ -122,7 +122,24 @@ public class EvolutionEventService {
             log.debug("processGroupMessage chamado para grupo não monitorado | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
             return;
         }
-        log.info("Mensagem recebida | grupo={}({})", WAGroup.getGroupName(), WAGroup.getEvolutionGroupId());
+        // Resolve remetente com fallback: participantAlt -> participant
+        String participantAlt = null;
+        String participant = null;
+        try {
+            participantAlt = eventEvolution.getData().getKey().getParticipantAlt();
+        } catch (Exception ignored) {}
+        try {
+            participant = eventEvolution.getData().getKey().getParticipant();
+        } catch (Exception ignored) {}
+
+        String senderRaw = (participantAlt != null && !participantAlt.isBlank()) ? participantAlt : participant;
+        String senderNumber = senderRaw != null ? senderRaw.replaceAll("[:@].*", "") : null;
+        String senderLog = (senderNumber != null && !senderNumber.isBlank())
+                ? senderNumber
+                : (eventEvolution.getData() != null ? eventEvolution.getData().getPushName() : null);
+
+        log.info("Mensagem recebida | grupo={}({}) | de={}",
+                WAGroup.getGroupName(), WAGroup.getEvolutionGroupId(), senderLog != null ? senderLog : "?");
 
         WAConversation waConversation = WAGroup.getWAConversation();
         if (waConversation == null || waConversation.getId() == null) {
@@ -132,8 +149,7 @@ public class EvolutionEventService {
         }
 
         WAContact waContact = waContactService.findOrCreateWaContact(
-                eventEvolution.getData().getKey().getParticipantAlt()
-                        .replaceAll("[:@].*", ""),
+                senderNumber,
                 eventEvolution.getData().getPushName()
         );
 
