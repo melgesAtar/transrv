@@ -8,7 +8,8 @@ public class ImageMessage {
     private String caption;
     // Alguns provedores enviam sha/enc sha/thumbnail como objeto em vez de string
     private JsonElement fileSha256;
-    private String fileLength;
+
+    private JsonElement fileLength;
     private Integer height;
     private Integer width;
     // mediaKey pode vir como string ou objeto
