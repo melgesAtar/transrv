@@ -2,8 +2,6 @@ package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-
-import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,5 +21,8 @@ public class Employee {
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<EmployeeAlertTerm> employeeAlertTerms = new HashSet<>();
+
+    @Column(name = "isActive")
+    private boolean isActive;
 
 }
