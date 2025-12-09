@@ -2,6 +2,8 @@ package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,6 +25,8 @@ public class Employee {
     private Set<EmployeeAlertTerm> employeeAlertTerms = new HashSet<>();
 
     @Column(name = "isActive")
+    @Getter
+    @Setter
     private boolean isActive;
 
 }
