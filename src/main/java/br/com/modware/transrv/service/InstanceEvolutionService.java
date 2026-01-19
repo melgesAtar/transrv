@@ -22,7 +22,7 @@ public class InstanceEvolutionService {
     @Value("${evolution.api.key}")
     private String apiKey;
 
-    @Value("${app.evolution.instance-name:transRV_numero_2}")
+    @Value("${app.evolution.instance-name:}")
     private String instanceName;
 
     static final ObjectMapper MAPPER = new ObjectMapper();
