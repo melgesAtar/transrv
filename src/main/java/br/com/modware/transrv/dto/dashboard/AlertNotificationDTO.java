@@ -1,6 +1,5 @@
 package br.com.modware.transrv.dto.dashboard;
 
-import br.com.modware.transrv.model.Ticket;
 import lombok.Data;
 
 @Data

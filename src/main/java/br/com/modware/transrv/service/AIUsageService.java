@@ -3,7 +3,6 @@ package br.com.modware.transrv.service;
 import br.com.modware.transrv.model.AIUsage;
 
 import br.com.modware.transrv.repository.AIUsageRepository;
-import br.com.modware.transrv.repository.UsageRepository;
 import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +15,6 @@ public class AIUsageService {
         this.aiUsageRepository = aiUsageRepository;
     }
 
-
     public void saveUsage(AIUsage usage) {
         if (aiUsageRepository.existsByMessage(usage.getMessage())) {
             log.info("AI Usage for messageId {} already exists, skipping", usage.getMessage());
@@ -24,6 +22,5 @@ public class AIUsageService {
         }
         aiUsageRepository.save(usage);
     }
-
 
 }

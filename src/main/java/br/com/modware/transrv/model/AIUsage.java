@@ -2,7 +2,6 @@ package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,7 +19,8 @@ public class AIUsage {
     @Getter
     private WAMessage message;
 
-    public AIUsage(int promptTokens, int completionTokens, int totalTokens, LocalDateTime createdAt, WAMessage message) {
+    public AIUsage(int promptTokens, int completionTokens, int totalTokens, LocalDateTime createdAt,
+            WAMessage message) {
         this.promptTokens = promptTokens;
         this.completionTokens = completionTokens;
         this.totalTokens = totalTokens;

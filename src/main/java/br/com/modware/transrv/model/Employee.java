@@ -15,10 +15,12 @@ public class Employee {
     private Long id;
 
     @Getter
+    @Setter
     private String name;
 
     @ManyToOne
     @JoinColumn(name = "department_id")
+    @Setter
     private Department department;
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -3,15 +3,12 @@ package br.com.modware.transrv.repository;
 import br.com.modware.transrv.model.InstanceEvolution;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface InstanceEvolutionRepository extends JpaRepository<InstanceEvolution,Long> {
+public interface InstanceEvolutionRepository extends JpaRepository<InstanceEvolution, Long> {
     Optional<InstanceEvolution> findByInstanceName(String instanceName);
 
     boolean existsByInstanceName(String instanceName);
-
 
 }

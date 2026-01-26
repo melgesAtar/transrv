@@ -1,6 +1,5 @@
 package br.com.modware.transrv.dto.openai;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 
