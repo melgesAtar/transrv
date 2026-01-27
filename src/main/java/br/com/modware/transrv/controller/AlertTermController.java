@@ -1,5 +1,6 @@
 package br.com.modware.transrv.controller;
 
+import br.com.modware.transrv.dto.alert.AlertTermCreateRequest;
 import br.com.modware.transrv.dto.alert.AlertTermFilterRequest;
 import br.com.modware.transrv.dto.alert.AlertTermPageResponse;
 import br.com.modware.transrv.model.AlertTerm;
@@ -70,6 +71,28 @@ public class AlertTermController {
         );
         
         AlertTermPageResponse response = alertTermQueryService.findAlertTerms(filter);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Criar novo termo de alerta",
+        description = "Cria um novo termo de alerta. O código é gerado automaticamente pelo backend baseado no nome (formato MAIUSCULAS_MAIUSCULAS, máximo 256 caracteres). Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Termo de alerta criado com sucesso",
+            content = @Content(schema = @Schema(implementation = AlertTermResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (nome ou descrição vazios, muito longos, ou código gerado inválido)"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
+    public ResponseEntity<AlertTermResponse> createAlertTerm(
+            @Parameter(description = "Dados do novo termo de alerta")
+            @RequestBody AlertTermCreateRequest request) {
+        
+        AlertTerm alertTerm = alertTermsService.create(request.name(), request.description());
+        AlertTermResponse response = AlertTermResponse.from(alertTerm);
         return ResponseEntity.ok(response);
     }
 

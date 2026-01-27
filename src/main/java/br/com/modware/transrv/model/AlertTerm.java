@@ -20,7 +20,6 @@ public class AlertTerm {
     private Long id;
 
     @Column(nullable=false, unique=true, length=64)
-
     private String code;      
 
     @Column(nullable=false, length=120)
