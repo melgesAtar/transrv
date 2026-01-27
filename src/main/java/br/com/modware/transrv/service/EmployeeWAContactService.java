@@ -30,9 +30,12 @@ public class EmployeeWAContactService {
 
     @Transactional(readOnly = true)
     public List<EmployeeWAContact> findByEmployee(Long employeeId) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new IllegalArgumentException("Funcionário não encontrado com ID: " + employeeId));
-        return employeeWAContactRepository.findByEmployee(employee);
+        // Verificar se o funcionário existe
+        if (!employeeRepository.existsById(employeeId)) {
+            throw new IllegalArgumentException("Funcionário não encontrado com ID: " + employeeId);
+        }
+        // Usar método com fetch join para evitar LazyInitializationException
+        return employeeWAContactRepository.findByEmployeeIdWithContact(employeeId);
     }
 
     @Transactional
