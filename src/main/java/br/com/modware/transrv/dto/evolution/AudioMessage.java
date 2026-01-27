@@ -15,7 +15,8 @@ public class AudioMessage {
     JsonElement mediaKey;
     JsonElement fileEncSha256;
     String directPath;
-    String mediaKeyTimestamp;
+    // mediaKeyTimestamp pode vir como string ou objeto
+    JsonElement mediaKeyTimestamp;
     JsonElement waveform;
 
 }

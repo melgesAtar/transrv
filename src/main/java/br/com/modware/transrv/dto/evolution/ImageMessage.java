@@ -16,7 +16,8 @@ public class ImageMessage {
     private JsonElement mediaKey;
     private JsonElement fileEncSha256;
     private String directPath;
-    private String mediaKeyTimestamp;
+    // mediaKeyTimestamp pode vir como string ou objeto
+    private JsonElement mediaKeyTimestamp;
     private JsonElement jpegThumbnail;
 
 

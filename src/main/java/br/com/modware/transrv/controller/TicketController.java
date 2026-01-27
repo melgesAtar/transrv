@@ -2,7 +2,10 @@ package br.com.modware.transrv.controller;
 
 import br.com.modware.transrv.dto.ticket.TicketFilterRequest;
 import br.com.modware.transrv.dto.ticket.TicketPageResponse;
+import br.com.modware.transrv.dto.ticket.CloseTicketRequest;
+import br.com.modware.transrv.dto.ticket.TicketResponse;
 import br.com.modware.transrv.service.TicketQueryService;
+import br.com.modware.transrv.service.TicketService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,9 +27,11 @@ import br.com.modware.transrv.model.Ticket;
 public class TicketController {
     
     private final TicketQueryService ticketQueryService;
+    private final TicketService ticketService;
 
-    public TicketController(TicketQueryService ticketQueryService) {
+    public TicketController(TicketQueryService ticketQueryService, TicketService ticketService) {
         this.ticketQueryService = ticketQueryService;
+        this.ticketService = ticketService;
     }
 
     @Operation(
@@ -75,6 +80,51 @@ public class TicketController {
         );
         
         TicketPageResponse response = ticketQueryService.findTickets(filter);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Fechar ticket",
+        description = "Fecha um ticket aberto e permite vincular um funcionário responsável pelo fechamento. O employeeId é opcional."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Ticket fechado com sucesso",
+            content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (ticket não está aberto ou funcionário não encontrado)"),
+        @ApiResponse(responseCode = "404", description = "Ticket não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PostMapping("/{id}/close")
+    public ResponseEntity<TicketResponse> closeTicket(
+            @Parameter(description = "ID do ticket a ser fechado", required = true, example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Dados para fechamento do ticket (employeeId opcional). Pode ser enviado vazio {} ou omitido.")
+            @RequestBody(required = false) CloseTicketRequest request) {
+        
+        Long employeeId = (request != null && request.employeeId() != null) ? request.employeeId() : null;
+        Ticket ticket = ticketService.closeTicketWithEmployee(id, employeeId);
+        TicketResponse response = TicketResponse.from(ticket);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Marcar ticket como aberto incorretamente",
+        description = "Marca um ticket como aberto incorretamente e o fecha automaticamente. Útil para feedback sobre tickets que foram abertos por engano."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Ticket marcado como incorreto e fechado com sucesso",
+            content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (ticket não está aberto)"),
+        @ApiResponse(responseCode = "404", description = "Ticket não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PostMapping("/{id}/incorrect")
+    public ResponseEntity<TicketResponse> markAsIncorrect(
+            @Parameter(description = "ID do ticket a ser marcado como incorreto", required = true, example = "1")
+            @PathVariable Long id) {
+        
+        Ticket ticket = ticketService.closeAsIncorrect(id);
+        TicketResponse response = TicketResponse.from(ticket);
         return ResponseEntity.ok(response);
     }
 }

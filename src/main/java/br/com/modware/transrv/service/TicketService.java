@@ -38,6 +38,7 @@ public class TicketService {
     private final WAMessageService waMessageService;
     private final WAGroupService waGroupService;
     private final TicketWebSocketService ticketWebSocketService;
+    private final br.com.modware.transrv.repository.EmployeeRepository employeeRepository;
 
     private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TicketService.class);
 
@@ -68,7 +69,8 @@ public class TicketService {
                          WAMessageService waMessageService,
                          WAGroupService waGroupService,
                          br.com.modware.transrv.repository.EmployeeWAContactRepository employeeWAContactRepository,
-                         TicketWebSocketService ticketWebSocketService) {
+                         TicketWebSocketService ticketWebSocketService,
+                         br.com.modware.transrv.repository.EmployeeRepository employeeRepository) {
         this.ticketRepository = ticketRepository;
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
@@ -82,6 +84,7 @@ public class TicketService {
         this.waGroupService = waGroupService;
         this.employeeWAContactRepository = employeeWAContactRepository;
         this.ticketWebSocketService = ticketWebSocketService;
+        this.employeeRepository = employeeRepository;
     }
 
 
@@ -321,6 +324,42 @@ public class TicketService {
             // Publica evento de ticket marcado como incorreto via WebSocket
             ticketWebSocketService.publishTicketMarkedIncorrect(ticket);
         }
+        return ticket;
+    }
+
+    public Ticket closeTicketWithEmployee(Long ticketId, Long employeeId) {
+        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
+        if (ticket.getStatus() != Ticket.Status.OPEN) {
+            throw new IllegalStateException("Ticket não está aberto. Status atual: " + ticket.getStatus());
+        }
+
+        ticket.setStatus(Ticket.Status.CLOSED);
+        ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
+
+        // Vincular funcionário se fornecido
+        if (employeeId != null) {
+            Employee employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Funcionário não encontrado com ID: " + employeeId));
+            ticket.setEmployeeResponsibleForClosingTheCall(employee);
+            log.info("Ticket {} fechado com funcionário responsável: {} (ID: {})", 
+                    ticket.getId(), employee.getName(), employee.getId());
+        }
+
+        ticket = ticketRepository.save(ticket);
+
+        try {
+            scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
+            scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
+            scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
+        } catch (SchedulerException e) {
+            throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
+        }
+
+        dashboardBroadcaster.publishUpdate();
+        
+        // Publica evento de fechamento via WebSocket
+        ticketWebSocketService.publishTicketClosed(ticket);
+
         return ticket;
     }
 
