@@ -336,7 +336,7 @@ public class TicketService {
         ticket.setStatus(Ticket.Status.CLOSED);
         ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
 
-        // Vincular funcionário se fornecido
+       
         if (employeeId != null) {
             Employee employee = employeeRepository.findById(employeeId)
                     .orElseThrow(() -> new IllegalArgumentException("Funcionário não encontrado com ID: " + employeeId));
@@ -354,8 +354,6 @@ public class TicketService {
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }
-
-        dashboardBroadcaster.publishUpdate();
         
         // Publica evento de fechamento via WebSocket
         ticketWebSocketService.publishTicketClosed(ticket);

@@ -30,6 +30,7 @@ public class DashboardBroadcaster {
         return emitter;
     }
 
+    
     public void publishUpdate() {
         DashboardSummaryDTO data;
         try {
