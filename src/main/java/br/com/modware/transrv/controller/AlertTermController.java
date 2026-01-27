@@ -100,23 +100,23 @@ public class AlertTermController {
     }
 
     @Operation(
-        summary = "Desabilitar um termo de alerta",
-        description = "Desabilita um termo de alerta, alterando seu status para INACTIVE. Apenas usuários com role ADMIN podem executar esta operação."
+        summary = "Alternar status de um termo de alerta (toggle)",
+        description = "Alterna o status de um termo de alerta entre ACTIVE e INACTIVE. Se estiver ACTIVE, torna-se INACTIVE e vice-versa. Apenas usuários com role ADMIN podem executar esta operação."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Termo de alerta desabilitado com sucesso",
+        @ApiResponse(responseCode = "200", description = "Status do termo de alerta alternado com sucesso",
             content = @Content(schema = @Schema(implementation = AlertTermResponse.class))),
         @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
         @ApiResponse(responseCode = "404", description = "Termo de alerta não encontrado"),
         @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/{id}/disable")
-    public ResponseEntity<AlertTermResponse> disable(
-            @Parameter(description = "ID do termo de alerta a ser desabilitado", required = true, example = "1")
+    @PostMapping("/{id}/toggle")
+    public ResponseEntity<AlertTermResponse> toggle(
+            @Parameter(description = "ID do termo de alerta a ter o status alternado", required = true, example = "1")
             @PathVariable Long id) {
         
-        AlertTerm alertTerm = alertTermsService.disable(id);
+        AlertTerm alertTerm = alertTermsService.toggle(id);
         AlertTermResponse response = AlertTermResponse.from(alertTerm);
         return ResponseEntity.ok(response);
     }

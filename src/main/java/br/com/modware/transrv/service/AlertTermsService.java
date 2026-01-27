@@ -43,12 +43,19 @@ public class AlertTermsService {
         return alertTermRepository.save(alertTerm);
     }
 
+
+
     @Transactional
-    public AlertTerm disable(Long id) {
+    public AlertTerm toggle(Long id) {
         AlertTerm alertTerm = alertTermRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Termo de alerta não encontrado com ID: " + id));
 
-        alertTerm.setStatus(AlertTerm.Status.INACTIVE);
+        if (alertTerm.getStatus() == AlertTerm.Status.ACTIVE) {
+            alertTerm.setStatus(AlertTerm.Status.INACTIVE);
+        } else {
+            alertTerm.setStatus(AlertTerm.Status.ACTIVE);
+        }
+        
         return alertTermRepository.save(alertTerm);
     }
 }
