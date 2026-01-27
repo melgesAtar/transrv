@@ -84,6 +84,25 @@ public class TicketController {
     }
 
     @Operation(
+        summary = "Buscar ticket por ID",
+        description = "Retorna os detalhes completos de um ticket específico pelo seu ID"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Ticket encontrado com sucesso",
+            content = @Content(schema = @Schema(implementation = TicketResponse.class))),
+        @ApiResponse(responseCode = "404", description = "Ticket não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @GetMapping("/{id}")
+    public ResponseEntity<TicketResponse> getTicketById(
+            @Parameter(description = "ID do ticket a ser buscado", required = true, example = "1")
+            @PathVariable Long id) {
+        
+        TicketResponse response = ticketQueryService.findTicketById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
         summary = "Fechar ticket",
         description = "Fecha um ticket aberto e permite vincular um funcionário responsável pelo fechamento. O employeeId é opcional."
     )

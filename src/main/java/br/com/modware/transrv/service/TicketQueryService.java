@@ -66,6 +66,17 @@ public class TicketQueryService {
     }
 
   
+    @Transactional(readOnly = true)
+    public TicketResponse findTicketById(Long id) {
+        Specification<Ticket> spec = (root, query, cb) -> cb.equal(root.get("id"), id);
+        
+        Specification<Ticket> specWithFetch = addFetchJoins(spec);
+        
+        return ticketRepository.findOne(specWithFetch)
+                .map(TicketResponse::from)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Ticket não encontrado com ID: " + id));
+    }
+
     private Specification<Ticket> addFetchJoins(Specification<Ticket> spec) {
         return spec.and((root, query, cb) -> {
             
