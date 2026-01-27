@@ -23,7 +23,9 @@ import java.util.List;
 import br.com.modware.transrv.dto.employee.EmployeeAlertTermResponse;
 import br.com.modware.transrv.dto.employee.LinkAlertTermRequest;
 import br.com.modware.transrv.dto.employee.UnlinkAlertTermRequest;
-
+import br.com.modware.transrv.service.EmployeeWAContactService;
+import br.com.modware.transrv.dto.employee.EmployeeWAContactResponse;
+import br.com.modware.transrv.dto.employee.LinkWAContactRequest;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -34,11 +36,12 @@ public class EmployeeController {
     private final EmployeeQueryService employeeQueryService;
     private final EmployeeService employeeService;
     private final EmployeeAlertTermService employeeAlertTermService;
-
-    public EmployeeController(EmployeeQueryService employeeQueryService, EmployeeService employeeService, EmployeeAlertTermService employeeAlertTermService) {
+    private final EmployeeWAContactService employeeWAContactService;
+    public EmployeeController(EmployeeQueryService employeeQueryService, EmployeeService employeeService, EmployeeAlertTermService employeeAlertTermService, EmployeeWAContactService employeeWAContactService) {
         this.employeeService = employeeService;
         this.employeeQueryService = employeeQueryService;
         this.employeeAlertTermService = employeeAlertTermService;
+        this.employeeWAContactService = employeeWAContactService;
     }
 
     @Operation(
@@ -206,4 +209,74 @@ public class EmployeeController {
         );
         return ResponseEntity.ok().build();
     }
+
+
+    @Operation(
+        summary = "Listar contatos WhatsApp vinculados ao funcionário",
+        description = "Retorna uma lista de todos os contatos WhatsApp vinculados a um funcionário"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de contatos vinculados retornada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Funcionário não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @GetMapping("/{id}/wa-contacts")
+    public ResponseEntity<List<EmployeeWAContactResponse>> getEmployeeWAContacts(
+            @Parameter(description = "ID do funcionário", required = true, example = "1")
+            @PathVariable Long id) {
+        
+        var employeeWAContacts = employeeWAContactService.findByEmployee(id);
+        List<EmployeeWAContactResponse> response = employeeWAContacts.stream()
+                .map(EmployeeWAContactResponse::from)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Vincular contato WhatsApp ao funcionário",
+        description = "Vincula um contato WhatsApp a um funcionário. Não permite vínculos duplicados. Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contato vinculado com sucesso",
+            content = @Content(schema = @Schema(implementation = EmployeeWAContactResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (vínculo duplicado, funcionário ou contato não encontrado)"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "404", description = "Funcionário ou contato não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/wa-contacts")
+    public ResponseEntity<EmployeeWAContactResponse> linkWAContact(
+            @Parameter(description = "ID do funcionário", required = true, example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Dados do vínculo (waContactId)")
+            @RequestBody LinkWAContactRequest request) {
+        
+        var employeeWAContact = employeeWAContactService.linkWAContact(id, request.waContactId());
+        EmployeeWAContactResponse response = EmployeeWAContactResponse.from(employeeWAContact);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Desvincular contato WhatsApp do funcionário",
+        description = "Remove o vínculo entre um contato WhatsApp e um funcionário. Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Contato desvinculado com sucesso"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "404", description = "Funcionário, contato ou vínculo não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/wa-contacts/{waContactId}")
+    public ResponseEntity<Void> unlinkWAContact(
+            @Parameter(description = "ID do funcionário", required = true, example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "ID do contato WhatsApp", required = true, example = "1")
+            @PathVariable Long waContactId) {
+        
+        employeeWAContactService.unlinkWAContact(id, waContactId);
+        return ResponseEntity.ok().build();
+    }
+
 }
