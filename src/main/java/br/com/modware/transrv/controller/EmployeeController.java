@@ -18,6 +18,12 @@ import br.com.modware.transrv.dto.employee.EmployeeUpdateRequest;
 import br.com.modware.transrv.dto.employee.EmployeeResponse;
 import br.com.modware.transrv.service.EmployeeService;
 import org.springframework.security.access.prepost.PreAuthorize;
+import br.com.modware.transrv.service.EmployeeAlertTermService;
+import java.util.List;
+import br.com.modware.transrv.dto.employee.EmployeeAlertTermResponse;
+import br.com.modware.transrv.dto.employee.LinkAlertTermRequest;
+import br.com.modware.transrv.dto.employee.UnlinkAlertTermRequest;
+
 
 @RestController
 @RequestMapping("/api/employees")
@@ -27,10 +33,12 @@ public class EmployeeController {
     
     private final EmployeeQueryService employeeQueryService;
     private final EmployeeService employeeService;
-    
-    public EmployeeController(EmployeeQueryService employeeQueryService, EmployeeService employeeService) {
+    private final EmployeeAlertTermService employeeAlertTermService;
+
+    public EmployeeController(EmployeeQueryService employeeQueryService, EmployeeService employeeService, EmployeeAlertTermService employeeAlertTermService) {
         this.employeeService = employeeService;
         this.employeeQueryService = employeeQueryService;
+        this.employeeAlertTermService = employeeAlertTermService;
     }
 
     @Operation(
@@ -120,4 +128,82 @@ public class EmployeeController {
         return ResponseEntity.ok(response);
     }
 
+    
+    @Operation(
+        summary = "Listar alertas vinculados ao funcionário",
+        description = "Retorna uma lista de todos os alertas vinculados a um funcionário, incluindo o nível de prioridade de cada vínculo"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de alertas vinculados retornada com sucesso"),
+        @ApiResponse(responseCode = "404", description = "Funcionário não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @GetMapping("/{id}/alert-terms")
+    public ResponseEntity<List<EmployeeAlertTermResponse>> getEmployeeAlertTerms(
+            @Parameter(description = "ID do funcionário", required = true, example = "1")
+            @PathVariable Long id) {
+        
+        var employeeAlertTerms = employeeAlertTermService.findByEmployee(id);
+        List<EmployeeAlertTermResponse> response = employeeAlertTerms.stream()
+                .map(EmployeeAlertTermResponse::from)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+
+    @Operation(
+        summary = "Vincular alerta ao funcionário",
+        description = "Vincula um termo de alerta a um funcionário com um nível de prioridade específico. Não permite vínculos duplicados (mesmo funcionário + alerta + nível de prioridade). Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Alerta vinculado com sucesso",
+            content = @Content(schema = @Schema(implementation = EmployeeAlertTermResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (vínculo duplicado, nível de prioridade inválido, funcionário ou alerta não encontrado)"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "404", description = "Funcionário ou alerta não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{id}/alert-terms")
+    public ResponseEntity<EmployeeAlertTermResponse> linkAlertTerm(
+            @Parameter(description = "ID do funcionário", required = true, example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Dados do vínculo (alertTermId e priorityLevel)")
+            @RequestBody LinkAlertTermRequest request) {
+        
+        var employeeAlertTerm = employeeAlertTermService.linkAlertTerm(
+                id, 
+                request.alertTermId(), 
+                request.priorityLevel()
+        );
+        EmployeeAlertTermResponse response = EmployeeAlertTermResponse.from(employeeAlertTerm);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Desvincular alerta do funcionário",
+        description = "Remove o vínculo entre um termo de alerta e um funcionário para um nível de prioridade específico. Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Alerta desvinculado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (nível de prioridade inválido)"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "404", description = "Funcionário, alerta ou vínculo não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}/alert-terms")
+    public ResponseEntity<Void> unlinkAlertTerm(
+            @Parameter(description = "ID do funcionário", required = true, example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Dados do vínculo a ser removido (alertTermId e priorityLevel)")
+            @RequestBody UnlinkAlertTermRequest request) {
+        
+        employeeAlertTermService.unlinkAlertTerm(
+                id, 
+                request.alertTermId(), 
+                request.priorityLevel()
+        );
+        return ResponseEntity.ok().build();
+    }
 }
