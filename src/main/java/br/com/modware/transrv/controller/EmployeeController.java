@@ -13,6 +13,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import br.com.modware.transrv.dto.employee.EmployeeCreateRequest;
+import br.com.modware.transrv.dto.employee.EmployeeUpdateRequest;
+import br.com.modware.transrv.dto.employee.EmployeeResponse;
+import br.com.modware.transrv.service.EmployeeService;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -21,8 +26,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public class EmployeeController {
     
     private final EmployeeQueryService employeeQueryService;
-
-    public EmployeeController(EmployeeQueryService employeeQueryService) {
+    private final EmployeeService employeeService;
+    
+    public EmployeeController(EmployeeQueryService employeeQueryService, EmployeeService employeeService) {
+        this.employeeService = employeeService;
         this.employeeQueryService = employeeQueryService;
     }
 
@@ -65,4 +72,52 @@ public class EmployeeController {
         EmployeePageResponse response = employeeQueryService.findEmployees(filter);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(
+        summary = "Criar novo funcionário",
+        description = "Cria um novo funcionário no sistema. Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Funcionário criado com sucesso",
+            content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (nome vazio ou departamento não encontrado)"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
+    public ResponseEntity<EmployeeResponse> createEmployee(
+            @Parameter(description = "Dados do novo funcionário")
+            @RequestBody EmployeeCreateRequest request) {
+        
+        var employee = employeeService.createEmployee(request);
+        EmployeeResponse response = EmployeeResponse.from(employee);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Atualizar funcionário",
+        description = "Atualiza os dados de um funcionário existente. Todos os campos são opcionais - apenas os campos enviados serão atualizados. Apenas usuários com role ADMIN podem executar esta operação."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Funcionário atualizado com sucesso",
+            content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Requisição inválida (nome vazio ou departamento não encontrado)"),
+        @ApiResponse(responseCode = "403", description = "Acesso negado (apenas ADMIN)"),
+        @ApiResponse(responseCode = "404", description = "Funcionário não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<EmployeeResponse> updateEmployee(
+            @Parameter(description = "ID do funcionário a ser atualizado", required = true, example = "1")
+            @PathVariable Long id,
+            @Parameter(description = "Dados do funcionário a serem atualizados")
+            @RequestBody EmployeeUpdateRequest request) {
+        
+        var employee = employeeService.updateEmployee(id, request);
+        EmployeeResponse response = EmployeeResponse.from(employee);
+        return ResponseEntity.ok(response);
+    }
+
 }
