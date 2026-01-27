@@ -55,7 +55,7 @@ public class AuthController {
             cookie.setSecure(true); 
             cookie.setPath("/");
             cookie.setMaxAge(86400); 
-            cookie.setAttribute("SameSite", "Strict");
+            cookie.setAttribute("SameSite", "None");
             response.addCookie(cookie);
             
             return ResponseEntity.ok(loginResult.authResponse());

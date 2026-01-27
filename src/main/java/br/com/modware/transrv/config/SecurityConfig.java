@@ -45,8 +45,8 @@ public class SecurityConfig {
                         .requestMatchers("/webhook/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/ws/**").permitAll() // WebSocket endpoints
-                        .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "USER", "MANAGER")
-                        .requestMatchers("/api/**").hasAnyRole("ADMIN", "USER", "MANAGER")
+                        .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers("/api/**").hasAnyRole("ADMIN", "USER")
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
