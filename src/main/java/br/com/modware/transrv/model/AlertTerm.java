@@ -2,6 +2,7 @@ package br.com.modware.transrv.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
@@ -11,6 +12,7 @@ import java.util.Set;
 
 @Entity
 @Getter
+@Setter
 @Table(name = "alert_term")
 public class AlertTerm {
     @Id
@@ -19,7 +21,7 @@ public class AlertTerm {
 
     @Column(nullable=false, unique=true, length=64)
 
-    private String code;        // imutável (ex.: RISCO_ETA_ORIGEM)
+    private String code;      
 
     @Column(nullable=false, length=120)
     
