@@ -20,6 +20,7 @@ public class Employee {
 
     @ManyToOne
     @JoinColumn(name = "department_id")
+    @Getter
     @Setter
     private Department department;
 
