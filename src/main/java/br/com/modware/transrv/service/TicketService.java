@@ -37,6 +37,7 @@ public class TicketService {
     private final WAContactService waContactService;
     private final WAMessageService waMessageService;
     private final WAGroupService waGroupService;
+    private final TicketWebSocketService ticketWebSocketService;
 
     private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TicketService.class);
 
@@ -66,7 +67,8 @@ public class TicketService {
                          WAContactService waContactService,
                          WAMessageService waMessageService,
                          WAGroupService waGroupService,
-                         br.com.modware.transrv.repository.EmployeeWAContactRepository employeeWAContactRepository) {
+                         br.com.modware.transrv.repository.EmployeeWAContactRepository employeeWAContactRepository,
+                         TicketWebSocketService ticketWebSocketService) {
         this.ticketRepository = ticketRepository;
         this.employeeAlertTermRepository = employeeAlertTermRepository;
 
@@ -79,6 +81,7 @@ public class TicketService {
         this.waMessageService = waMessageService;
         this.waGroupService = waGroupService;
         this.employeeWAContactRepository = employeeWAContactRepository;
+        this.ticketWebSocketService = ticketWebSocketService;
     }
 
 
@@ -116,6 +119,10 @@ public class TicketService {
         // Publica atualização após agendar todos os jobs para evitar falha no fluxo em caso de erro SSE
         dashboardBroadcaster.publishUpdate();
         dashboardBroadcaster.publishAlert(new AlertNotificationDTO("TICKET_OPENED", ticket.getId(), 1));
+        
+        // Publica evento via WebSocket para todos os clientes conectados
+        ticketWebSocketService.publishTicketOpened(ticket);
+        
         return ticket;
     }
 
@@ -245,6 +252,9 @@ public class TicketService {
         notifyEmployees(ticket, level);
         dashboardBroadcaster.publishUpdate();
         
+        // Publica evento de escalação via WebSocket
+        ticketWebSocketService.publishTicketEscalated(ticket);
+        
         if (level == 3) {
             dashboardBroadcaster.publishAlert(new AlertNotificationDTO("TICKET_ESCALATED_LEVEL_3", ticketId, level));
         }
@@ -255,8 +265,11 @@ public class TicketService {
         if (ticket.getStatus() == Ticket.Status.OPEN) {
             ticket.setStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION);
             ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
-            ticketRepository.save(ticket);
+            ticket = ticketRepository.save(ticket);
             dashboardBroadcaster.publishUpdate();
+            
+            // Publica evento de fechamento via WebSocket
+            ticketWebSocketService.publishTicketClosed(ticket);
             try {
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));
                 scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
@@ -281,6 +294,9 @@ public class TicketService {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
             dashboardBroadcaster.publishUpdate();
+            
+            // Publica evento de fechamento via WebSocket
+            ticketWebSocketService.publishTicketClosed(ticket);
         }
         return ticket;
     }
@@ -301,6 +317,9 @@ public class TicketService {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
             dashboardBroadcaster.publishUpdate();
+            
+            // Publica evento de ticket marcado como incorreto via WebSocket
+            ticketWebSocketService.publishTicketMarkedIncorrect(ticket);
         }
         return ticket;
     }
@@ -368,7 +387,10 @@ public class TicketService {
             if (closingMessage != null && closingMessage.getEmployee() != null) {
                 ticket.setEmployeeResponsibleForClosingTheCall(closingMessage.getEmployee());
             }
-            ticketRepository.save(ticket);
+            ticket = ticketRepository.save(ticket);
+            
+            // Publica evento de fechamento via WebSocket
+            ticketWebSocketService.publishTicketClosed(ticket);
 
 
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-expire"));

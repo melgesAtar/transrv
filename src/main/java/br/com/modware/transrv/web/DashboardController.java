@@ -37,7 +37,6 @@ public class DashboardController {
         return dashboardService.getSummary();
     }
 
-    // SSE stream for real-time updates
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() { return broadcaster.stream(); }
 

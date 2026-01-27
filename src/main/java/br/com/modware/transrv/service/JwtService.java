@@ -9,6 +9,9 @@ import java.util.HashMap;
 import io.jsonwebtoken.Jwts;
 import java.util.Date;
 import java.util.function.Function;
+import org.springframework.stereotype.Service;
+
+@Service
 public class JwtService {
     
     @Value("${jwt.secret}")

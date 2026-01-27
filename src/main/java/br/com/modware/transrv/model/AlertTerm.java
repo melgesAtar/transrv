@@ -10,6 +10,7 @@ import java.util.Set;
 
 
 @Entity
+@Getter
 @Table(name = "alert_term")
 public class AlertTerm {
     @Id
@@ -17,14 +18,15 @@ public class AlertTerm {
     private Long id;
 
     @Column(nullable=false, unique=true, length=64)
-    @Getter
+
     private String code;        // imutável (ex.: RISCO_ETA_ORIGEM)
 
     @Column(nullable=false, length=120)
+    
     private String name;     
     
     @Column(nullable=false, length=120)
-    @Getter
+
     private String description;
 
     @Enumerated(EnumType.STRING)

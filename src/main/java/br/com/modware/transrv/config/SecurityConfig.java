@@ -41,8 +41,11 @@ public class SecurityConfig {
             .sessionManagement(session -> 
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/auth/me").permitAll()
+                .requestMatchers("/api/auth/change-password").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/webhook/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/ws/**").permitAll() // WebSocket endpoints
                 .requestMatchers("/dashboard/**").hasAnyRole("ADMIN", "USER", "MANAGER")
                 .requestMatchers("/api/**").hasAnyRole("ADMIN", "USER", "MANAGER")
                 .anyRequest().permitAll()
