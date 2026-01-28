@@ -9,6 +9,7 @@ import br.com.modware.transrv.repository.AlertTermRepository;
 import br.com.modware.transrv.dto.dashboard.AlertNotificationDTO;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -31,8 +32,6 @@ public class TicketService {
     private final Scheduler scheduler;
     private final TicketNotificationService ticketNotificationService;
     private final br.com.modware.transrv.repository.EmployeeWAContactRepository employeeWAContactRepository;
-
-    private final DashboardBroadcaster dashboardBroadcaster;
     private final AlertTermRepository alertTermRepository;
     private final WAContactService waContactService;
     private final WAMessageService waMessageService;
@@ -63,7 +62,6 @@ public class TicketService {
                          InstanceEvolutionService instanceEvolutionService,
                          Scheduler scheduler,
                          TicketNotificationService ticketNotificationService,
-                         DashboardBroadcaster dashboardBroadcaster,
                          AlertTermRepository alertTermRepository,
                          WAContactService waContactService,
                          WAMessageService waMessageService,
@@ -77,7 +75,6 @@ public class TicketService {
         this.instanceEvolutionService = instanceEvolutionService;
         this.scheduler = scheduler;
         this.ticketNotificationService = ticketNotificationService;
-        this.dashboardBroadcaster = dashboardBroadcaster;
         this.alertTermRepository = alertTermRepository;
         this.waContactService = waContactService;
         this.waMessageService = waMessageService;
@@ -119,9 +116,7 @@ public class TicketService {
         scheduleEscalation(ticket, 3, Duration.ofSeconds(escalationLevel3DelaySeconds));
         scheduleExpiration(ticket, Duration.ofSeconds(ticketExpirationSeconds));
 
-        // Publica atualização após agendar todos os jobs para evitar falha no fluxo em caso de erro SSE
-        dashboardBroadcaster.publishUpdate();
-        dashboardBroadcaster.publishAlert(new AlertNotificationDTO("TICKET_OPENED", ticket.getId(), 1));
+   
         
         // Publica evento via WebSocket para todos os clientes conectados
         ticketWebSocketService.publishTicketOpened(ticket);
@@ -229,7 +224,7 @@ public class TicketService {
                 .build();
 
         scheduler.scheduleJob(job, trigger);
-        dashboardBroadcaster.publishUpdate();
+
     }
 
     private void scheduleExpiration(Ticket ticket, Duration delay) throws SchedulerException {
@@ -253,14 +248,9 @@ public class TicketService {
         if (ticket.getStatus() != Ticket.Status.OPEN) return;
 
         notifyEmployees(ticket, level);
-        dashboardBroadcaster.publishUpdate();
         
-        // Publica evento de escalação via WebSocket
         ticketWebSocketService.publishTicketEscalated(ticket);
         
-        if (level == 3) {
-            dashboardBroadcaster.publishAlert(new AlertNotificationDTO("TICKET_ESCALATED_LEVEL_3", ticketId, level));
-        }
     }
 
     public void expire(Long ticketId) {
@@ -268,9 +258,7 @@ public class TicketService {
         if (ticket.getStatus() == Ticket.Status.OPEN) {
             ticket.setStatus(Ticket.Status.CLOSED_WITHOUT_SOLUTION);
             ticket.setClosedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")));
-            ticket = ticketRepository.save(ticket);
-            dashboardBroadcaster.publishUpdate();
-            
+            ticket = ticketRepository.save(ticket);            
             // Publica evento de fechamento via WebSocket
             ticketWebSocketService.publishTicketClosed(ticket);
             try {
@@ -296,7 +284,6 @@ public class TicketService {
             } catch (SchedulerException e) {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
-            dashboardBroadcaster.publishUpdate();
             
             // Publica evento de fechamento via WebSocket
             ticketWebSocketService.publishTicketClosed(ticket);
@@ -319,14 +306,13 @@ public class TicketService {
             } catch (SchedulerException e) {
                 throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
             }
-            dashboardBroadcaster.publishUpdate();
             
-            // Publica evento de ticket marcado como incorreto via WebSocket
             ticketWebSocketService.publishTicketMarkedIncorrect(ticket);
         }
         return ticket;
     }
 
+    @Async
     public Ticket closeTicketWithEmployee(Long ticketId, Long employeeId) {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
         if (ticket.getStatus() != Ticket.Status.OPEN) {
@@ -355,13 +341,10 @@ public class TicketService {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }
         
-        // Publica evento de fechamento via WebSocket
         ticketWebSocketService.publishTicketClosed(ticket);
 
         return ticket;
     }
-
-
 
 
 
@@ -377,7 +360,6 @@ public class TicketService {
                 closingContact != null ? closingContact.getPhoneNumber() : null,
                 contentPreview);
 
-        // Procurar frases do tipo "ticket finalizado id 123" (variações de caixa e pontuação)
         if (messageContent != null) {
             Pattern phrasePattern = Pattern.compile(
                     "(?i)(?:ticket|chamado)\\s*finalizad[oa][\\s,:-]*.*?\\bid\\b\\s*[:\\-]?\\s*(\\d+)");
@@ -426,7 +408,7 @@ public class TicketService {
             }
             ticket = ticketRepository.save(ticket);
             
-            // Publica evento de fechamento via WebSocket
+      
             ticketWebSocketService.publishTicketClosed(ticket);
 
 
@@ -434,7 +416,6 @@ public class TicketService {
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-2"));
             scheduler.deleteJob(JobKey.jobKey(ticket.getId() + "-level-3"));
 
-            dashboardBroadcaster.publishUpdate();
         } catch (SchedulerException e) {
             throw new RuntimeException("Erro ao cancelar agendamentos do ticket " + ticket.getId(), e);
         }
