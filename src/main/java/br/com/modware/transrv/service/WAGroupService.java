@@ -50,11 +50,11 @@ public class WAGroupService {
     }
 
     @Transactional
-    public WAGroup removeAgent(Long groupId) {
+    public WAGroup toggleMonitoring(Long groupId) {
         WAGroup group = WAGroupRepository.findByIdWithAgent(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Grupo não encontrado com ID: " + groupId));
         
-        group.setAgent(null);
+        group.setMonitored(!group.isMonitored());
         WAGroup saved = WAGroupRepository.save(group);
         // Recarregar para garantir estado consistente
         return WAGroupRepository.findByIdWithAgent(saved.getId())

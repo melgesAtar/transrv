@@ -99,23 +99,23 @@ public class WAGroupController {
     }
 
     @Operation(
-        summary = "Desabilitar agente no grupo",
-        description = "Remove o agente vinculado ao grupo de WhatsApp, desabilitando-o. Apenas usuários ADMIN podem executar esta operação."
+        summary = "Alternar status de monitoramento do grupo",
+        description = "Habilita ou desabilita o monitoramento do grupo de WhatsApp (toggle do campo isMonitored). Apenas usuários ADMIN podem executar esta operação."
     )
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Agente desabilitado com sucesso",
+        @ApiResponse(responseCode = "200", description = "Status de monitoramento alterado com sucesso",
             content = @Content(schema = @Schema(implementation = WAGroupResponse.class))),
         @ApiResponse(responseCode = "400", description = "Grupo não encontrado"),
         @ApiResponse(responseCode = "401", description = "Não autenticado"),
         @ApiResponse(responseCode = "403", description = "Acesso negado - apenas ADMIN")
     })
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}/agent")
-    public ResponseEntity<WAGroupResponse> removeAgent(
+    @PostMapping("/{id}/toggle-monitoring")
+    public ResponseEntity<WAGroupResponse> toggleMonitoring(
             @Parameter(description = "ID do grupo", required = true, example = "1")
             @PathVariable Long id) {
         
-        var group = waGroupService.removeAgent(id);
+        var group = waGroupService.toggleMonitoring(id);
         return ResponseEntity.ok(WAGroupResponse.from(group));
     }
 }
