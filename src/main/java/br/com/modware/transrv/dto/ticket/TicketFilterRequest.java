@@ -6,7 +6,7 @@ import java.util.List;
 import br.com.modware.transrv.model.Ticket;
 
 public record TicketFilterRequest(
-    Long groupId,                         
+    List<Long> groupIds,                   
     List<Integer> escalationLevels,       
     List<Long> alertTermIds,               
     Ticket.Status status,                  

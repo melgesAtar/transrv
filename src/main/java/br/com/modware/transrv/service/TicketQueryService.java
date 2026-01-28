@@ -27,7 +27,7 @@ public class TicketQueryService {
     public TicketPageResponse findTickets(TicketFilterRequest filter) {
         
         Specification<Ticket> spec = TicketSpecification.buildSpecification(
-            filter.groupId(),
+            filter.groupIds(),
             filter.escalationLevels(),
             filter.alertTermIds(),
             filter.status(),

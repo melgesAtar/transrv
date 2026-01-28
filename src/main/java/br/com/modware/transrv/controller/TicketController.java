@@ -45,8 +45,8 @@ public class TicketController {
     })
     @GetMapping
     public ResponseEntity<TicketPageResponse> getTickets(
-            @Parameter(description = "ID do grupo WhatsApp para filtrar")
-            @RequestParam(required = false) Long groupId,
+            @Parameter(description = "Lista de IDs de grupos WhatsApp para filtrar (pode passar múltiplos valores)")
+            @RequestParam(required = false) List<Long> groupIds,
             @Parameter(description = "Lista de níveis de escalação (1, 2, 3) para filtrar")
             @RequestParam(required = false) List<Integer> escalationLevels,
             @Parameter(description = "Lista de IDs de tipos de alerta para filtrar")
@@ -67,7 +67,7 @@ public class TicketController {
             @RequestParam(defaultValue = "DESC") String sortDirection) {
         
         TicketFilterRequest filter = new TicketFilterRequest(
-            groupId,
+            groupIds,
             escalationLevels,
             alertTermIds,
             status,

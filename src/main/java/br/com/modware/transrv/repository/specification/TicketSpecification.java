@@ -10,10 +10,10 @@ import java.util.List;
 
 public class TicketSpecification {
 
-    public static Specification<Ticket> hasGroup(Long groupId) {
+    public static Specification<Ticket> hasGroups(List<Long> groupIds) {
         return (root, query, cb) -> {
-            if (groupId == null) return cb.conjunction();
-            return cb.equal(root.get("waGroup").get("id"), groupId);
+            if (groupIds == null || groupIds.isEmpty()) return cb.conjunction();
+            return root.get("waGroup").get("id").in(groupIds);
         };
     }
 
@@ -72,7 +72,7 @@ public class TicketSpecification {
 
     // Combina todas as specifications
     public static Specification<Ticket> buildSpecification(
-            Long groupId,
+            List<Long> groupIds,
             List<Integer> escalationLevels,
             List<Long> alertTermIds,
             Ticket.Status status,
@@ -82,7 +82,7 @@ public class TicketSpecification {
         
         Specification<Ticket> spec = Specification.where(null);
         
-        spec = spec.and(hasGroup(groupId));
+        spec = spec.and(hasGroups(groupIds));
         spec = spec.and(hasEscalationLevels(escalationLevels));
         spec = spec.and(hasAlertTerms(alertTermIds));
         spec = spec.and(hasStatus(status));
