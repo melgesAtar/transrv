@@ -312,7 +312,7 @@ public class TicketService {
         return ticket;
     }
 
-    @Async
+   
     public Ticket closeTicketWithEmployee(Long ticketId, Long employeeId) {
         Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
         if (ticket.getStatus() != Ticket.Status.OPEN) {

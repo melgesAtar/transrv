@@ -6,7 +6,6 @@ import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfi
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication(exclude = { SecurityAutoConfiguration.class })
-@EnableAsync
 public class TransrvApplication {
 
 	public static void main(String[] args) {
