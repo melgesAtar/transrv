@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -41,4 +42,26 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> , JpaSpeci
         long countOpenedSince(
                         @org.springframework.data.repository.query.Param("status") Ticket.Status status,
                         @org.springframework.data.repository.query.Param("start") java.time.LocalDateTime start);
+
+        @Query("select count(t) from Ticket t where t.createdAt >= :start and t.createdAt <= :end")
+        long countMessagesBetween(
+                        @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+                        @org.springframework.data.repository.query.Param("end") LocalDateTime end);
+
+        @Query("select count(t) from Ticket t where t.status = :status and t.closedAt >= :start and t.closedAt <= :end")
+        long countClosedTicketsBetween(
+                        @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+                        @org.springframework.data.repository.query.Param("end") LocalDateTime end,
+                        @org.springframework.data.repository.query.Param("status") Ticket.Status status);
+
+        @Query("select count(t) from Ticket t where t.status = :status and t.closedAt >= :start and t.closedAt <= :end")
+        long countClosedWithoutSolutionTicketsBetween(
+                        @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+                        @org.springframework.data.repository.query.Param("end") LocalDateTime end,
+                        @org.springframework.data.repository.query.Param("status") Ticket.Status status);
+
+        @Query("select count(t) from Ticket t where t.createdAt >= :start and t.createdAt <= :end")
+        long countTotalTicketsBetween(
+                        @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+                        @org.springframework.data.repository.query.Param("end") LocalDateTime end);
 }

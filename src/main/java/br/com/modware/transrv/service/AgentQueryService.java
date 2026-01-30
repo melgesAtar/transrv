@@ -29,10 +29,10 @@ public class AgentQueryService {
     @Transactional(readOnly = true)
     public AgentPageResponse findAgents(AgentFilterRequest filter) {
         
-        // Construir Specification com filtros dinâmicos
+        
         Specification<Agent> spec = buildSpecification(filter);
 
-        // Configurar ordenação
+        
         Sort sort = Sort.by(
             "DESC".equalsIgnoreCase(filter.sortDirection()) 
                 ? Sort.Direction.DESC 
@@ -40,13 +40,13 @@ public class AgentQueryService {
             filter.sortBy()
         );
         
-        // Criar Pageable
+        
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), sort);
 
-        // Executar query paginada
+        
         Page<Agent> agentPage = agentRepository.findAll(spec, pageable);
 
-        // Converter para DTOs
+        
         return new AgentPageResponse(
             agentPage.getContent().stream()
                 .map(AgentResponse::from)

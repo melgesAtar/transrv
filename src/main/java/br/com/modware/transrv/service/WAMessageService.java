@@ -36,7 +36,6 @@ public class WAMessageService {
     private static final String BASE_URL = "https://api.openai.com/v1";
     private static final String MODEL_VISION = "gpt-4.1-mini";
     private static final String MODEL_TRANSCRIBE = "gpt-4o-transcribe";
-    private static final long MAX_DOC_BYTES = 5L * 1024 * 1024; // 3 MiB
     private final ObjectMapper mapper = new ObjectMapper();
     private final WAMessageRepository waMessageRepository;
     private final RestTemplate restTemplate = new RestTemplate();

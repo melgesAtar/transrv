@@ -117,19 +117,39 @@
 			<version>0.12.3</version>
 			<scope>runtime</scope>
 		</dependency>
-		
+
 		<!-- SpringDoc OpenAPI (Swagger) - Versão compatível com Spring Boot 3.5.4 -->
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>2.8.5</version>
 		</dependency>
-		
+
 		<!-- Spring WebSocket -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
+
+        <!-- iText 8: geração de PDF -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>kernel</artifactId>
+            <version>8.0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>layout</artifactId>
+            <version>8.0.5</version>
+        </dependency>
+
+        <!-- Apache POI: geração de DOCX (Word) -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
 	</dependencies>
 
 	<build>

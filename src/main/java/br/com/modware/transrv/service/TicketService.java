@@ -6,10 +6,8 @@ import br.com.modware.transrv.quartz.ExpireTicketJob;
 import br.com.modware.transrv.repository.EmployeeAlertTermRepository;
 import br.com.modware.transrv.repository.TicketRepository;
 import br.com.modware.transrv.repository.AlertTermRepository;
-import br.com.modware.transrv.dto.dashboard.AlertNotificationDTO;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
